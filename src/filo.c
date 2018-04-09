@@ -49,7 +49,11 @@
 #include "mpi.h"
 
 #include "kvtree.h"
+#include "kvtree_util.h"
+#include "kvtree_mpi.h"
+
 #include "axl.h"
+
 #include "filo.h"
 
 #ifdef HAVE_LIBDTCMP
@@ -77,7 +81,7 @@ void* filo_malloc(size_t size, const char* file, int line)
   if (size > 0) {
     ptr = malloc(size);
     if (ptr == NULL) {
-      printf("Failed to allocate %llu bytes @ %s:%d", file, line);
+      printf("Failed to allocate %llu bytes @ %s:%d", (unsigned long long) size, file, line);
     }
   }
   return ptr;
