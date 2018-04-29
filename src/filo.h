@@ -22,16 +22,19 @@ int filo_init();
 int filo_finalize();
 
 int filo_fetch(
-  const char* src_path,
-  const char* dest_path,
+  const char* filopath,
+  const char* path,
+  int* num_files,
+  char*** src_filelist,
+  char*** dest_filelist,
   MPI_Comm comm
 );
 
 int filo_flush(
+  const char* filopath,
   int num_files,
   const char** src_filelist,
   const char** dest_filelist,
-  const char* dest_path,
   MPI_Comm comm
 );
 

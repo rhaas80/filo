@@ -515,15 +515,23 @@ static int filo_axl_sliding_window(
 
 /* fetch files from parallel file system */
 int filo_fetch(
-  const char* src_path,
-  const char* dest_path,
+  const char* filopath,
+  const char* path,
+  int* out_num_files,
+  char*** out_src_filelist,
+  char*** out_dest_filelist,
   MPI_Comm comm)
 {
   int rc = FILO_SUCCESS;
 
+  /* initialize output variables */
+  *out_num_files     = 0;
+  *out_src_filelist  = NULL;
+  *out_dest_filelist = NULL;
+
   /* get the list of files to read */
   kvtree* filelist = kvtree_new();
-  if (kvtree_read_scatter(src_path, filelist, comm) != KVTREE_SUCCESS) {
+  if (kvtree_read_scatter(filopath, filelist, comm) != KVTREE_SUCCESS) {
     kvtree_delete(&filelist);
     return FILO_FAILURE;
   }
@@ -549,7 +557,7 @@ int filo_fetch(
     char destname[1024];
     char* file2 = strdup(file);
     char* name = basename(file2);
-    snprintf(destname, sizeof(destname), "%s/%s", dest_path, name);
+    snprintf(destname, sizeof(destname), "%s/%s", path, name);
     dest_filelist[i] = strdup(destname);
     filo_free(&file2);
 
@@ -562,6 +570,7 @@ int filo_fetch(
     success = 0;
   }
 
+#if 0
   /* free our list of file names */
   for (i = 0; i < count; i++) {
     filo_free(&src_filelist[i]);
@@ -569,6 +578,12 @@ int filo_fetch(
   }
   filo_free(&src_filelist);
   filo_free(&dest_filelist);
+#endif
+
+  /* copy values to output variables */
+  *out_num_files     = count;
+  *out_src_filelist  = (char**) src_filelist;
+  *out_dest_filelist = (char**) dest_filelist;
 
   /* free the list of files */
   kvtree_delete(&filelist);
@@ -669,10 +684,10 @@ static int filo_create_dirs(int count, const char** dest_filelist, MPI_Comm comm
 }
 
 int filo_flush(
+  const char* filopath,
   int num_files,
   const char** src_filelist,
   const char** dest_filelist,
-  const char* dest_path,
   MPI_Comm comm)
 {
   int rc = FILO_SUCCESS;
@@ -686,7 +701,7 @@ int filo_flush(
   }
 
   /* save our file list to disk */
-  kvtree_write_gather(dest_path, filelist, comm);
+  kvtree_write_gather(filopath, filelist, comm);
 
   /* create directories */
   rc = filo_create_dirs(num_files, dest_filelist, comm);
