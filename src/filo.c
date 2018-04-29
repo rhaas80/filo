@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -103,6 +104,18 @@ void filo_free(void* p)
     /* set caller's pointer to NULL */
     *(void**)p = NULL;
   }
+}
+
+/* print error message to stdout */
+static void filo_err(const char *fmt, ...)
+{
+  va_list argp;
+  //fprintf(stdout, "FILO %s ERROR: rank %d on %s: ", REDSET_VERSION, redset_rank, redset_hostname);
+  fprintf(stdout, "FILO ERROR: ");
+  va_start(argp, fmt);
+  vfprintf(stdout, fmt, argp);
+  va_end(argp);
+  fprintf(stdout, "\n");
 }
 
 /* returns user's current mode as determine by his umask */
@@ -181,13 +194,17 @@ int filo_mkdir(const char* dir, mode_t mode)
 
 int filo_init()
 {
-  AXL_Init(NULL);
+  if (AXL_Init(NULL) != AXL_SUCCESS) {
+    return FILO_FAILURE;
+  }
   return FILO_SUCCESS;
 }
 
 int filo_finalize()
 {
-  AXL_Finalize();
+  if (AXL_Finalize() != AXL_SUCCESS) {
+    return FILO_FAILURE;
+  }
   return FILO_SUCCESS;
 }
 
@@ -347,29 +364,53 @@ static int filo_axl(int num_files, const char** src_filelist, const char** dest_
 
   /* define a transfer handle */
   int id = AXL_Create("AXL_XFER_SYNC", "transfer");
+  if (id < 0) {
+    filo_err("Failed to create AXL transfer handle @ %s:%d",
+      __FILE__, __LINE__
+    );
+    rc = FILO_FAILURE;
+  }
 
   /* add files to transfer list */
   int i;
   for (i = 0; i < num_files; i++) {
     const char* src_file  = src_filelist[i];
     const char* dest_file = dest_filelist[i];
-    AXL_Add(id, src_file, dest_file);
+    if (AXL_Add(id, src_file, dest_file) != AXL_SUCCESS) {
+      filo_err("Failed to add file to AXL transfer handle %d: %s --> %s @ %s:%d",
+        id, src_file, dest_file, __FILE__, __LINE__
+      );
+      rc = FILO_FAILURE;
+    }
   }
 
   /* TODO: flow control the dispatch */
 
   /* kick off the transfer */
-  AXL_Dispatch(id);
+  if (AXL_Dispatch(id) != AXL_SUCCESS) {
+    filo_err("Failed to dispatch AXL transfer handle %d @ %s:%d",
+      id, __FILE__, __LINE__
+    );
+    rc = FILO_FAILURE;
+  }
 
   /* wait for transfer to complete */
   int rc_axl = AXL_Wait(id);
   if (rc_axl != AXL_SUCCESS) {
     /* transfer failed */
+    filo_err("Failed to wait on AXL transfer handle %d @ %s:%d",
+      id, __FILE__, __LINE__
+    );
     rc = FILO_FAILURE;
   }
 
   /* release the handle */
-  AXL_Free(id);
+  if (AXL_Free(id) != AXL_SUCCESS) {
+    filo_err("Failed to free AXL transfer handle %d @ %s:%d",
+      id, __FILE__, __LINE__
+    );
+    rc = FILO_FAILURE;
+  }
 
   return rc;
 }
