@@ -53,6 +53,8 @@
 #include "kvtree_util.h"
 #include "kvtree_mpi.h"
 
+#include "spath.h"
+
 #include "axl.h"
 
 #include "filo.h"
@@ -142,7 +144,7 @@ mode_t filo_getmode(int read, int write, int execute)
 }
 
 /* recursively create directory and subdirectories */
-int filo_mkdir(const char* dir, mode_t mode)
+int filo_mkdir(const char* basepath, const char* dir, mode_t mode)
 {
   int rc = FILO_SUCCESS;
 
@@ -160,7 +162,7 @@ int filo_mkdir(const char* dir, mode_t mode)
       strcmp(path,".") != 0  &&
       strcmp(path,"/") != 0)
   {
-    rc = filo_mkdir(path, mode);
+    rc = filo_mkdir(basepath, path, mode);
   }
 
   /* if we can write to path, try to create subdir within path */
@@ -384,8 +386,6 @@ static int filo_axl(int num_files, const char** src_filelist, const char** dest_
     }
   }
 
-  /* TODO: flow control the dispatch */
-
   /* kick off the transfer */
   if (AXL_Dispatch(id) != AXL_SUCCESS) {
     filo_err("Failed to dispatch AXL transfer handle %d @ %s:%d",
@@ -516,6 +516,7 @@ static int filo_axl_sliding_window(
 /* fetch files from parallel file system */
 int filo_fetch(
   const char* filopath,
+  const char* basepath,
   const char* path,
   int* out_num_files,
   char*** out_src_filelist,
@@ -551,7 +552,18 @@ int filo_fetch(
   {
     /* strdup the filename into source list */
     const char* file = kvtree_elem_key(elem);
-    src_filelist[i] = strdup(file);
+
+    /* if basepath is given, prepend basepath to filename */
+    if (basepath != NULL) {
+      spath* fullpath = spath_from_str(basepath);
+      spath_append_str(fullpath, file);
+      spath_reduce(fullpath);
+      src_filelist[i] = spath_strdup(fullpath);
+      spath_delete(&fullpath);
+    } else {
+      /* just use value from path verbatim */
+      src_filelist[i] = strdup(file);
+    }
 
     /* compute and strdup detination name into dest list */
     char destname[1024];
@@ -598,7 +610,7 @@ int filo_fetch(
 }
 
 /* build list of directories needed for file list (one per file) */
-static int filo_create_dirs(int count, const char** dest_filelist, MPI_Comm comm)
+static int filo_create_dirs(const char* basepath, int count, const char** dest_filelist, MPI_Comm comm)
 {
   /* TODO: need to list dirs in order from parent to child */
 
@@ -662,7 +674,7 @@ static int filo_create_dirs(int count, const char** dest_filelist, MPI_Comm comm
     if (leader[i]) {
       /* create directory */
       const char* dir = dirs[i];
-      if (filo_mkdir(dir, mode_dir) != FILO_SUCCESS) {
+      if (filo_mkdir(basepath, dir, mode_dir) != FILO_SUCCESS) {
         success = 0;
       }
       filo_free(&dir);
@@ -685,6 +697,7 @@ static int filo_create_dirs(int count, const char** dest_filelist, MPI_Comm comm
 
 int filo_flush(
   const char* filopath,
+  const char* basepath,
   int num_files,
   const char** src_filelist,
   const char** dest_filelist,
@@ -697,14 +710,33 @@ int filo_flush(
   kvtree* filelist = kvtree_new();
   for (i = 0; i < num_files; i++) {
     const char* filename = dest_filelist[i];
-    kvtree_set_kv(filelist, FILO_KEY_FILE, filename);
+
+    /* if basepath is valid, compute relative path,
+     * otherwise use dest path verbatim */
+    if (basepath != NULL) {
+      /* generate relateive path to destination file */
+      spath* base = spath_from_str(basepath);
+      spath* dest = spath_from_str(filename);
+      spath* rel = spath_relative(base, dest);
+      char* relfile = spath_strdup(rel);
+  
+      kvtree_set_kv(filelist, FILO_KEY_FILE, relfile);
+  
+      filo_free(&relfile);
+      spath_delete(&rel);
+      spath_delete(&dest);
+      spath_delete(&base);
+    } else {
+      /* use destination file name verbatim */
+      kvtree_set_kv(filelist, FILO_KEY_FILE, filename);
+    }
   }
 
   /* save our file list to disk */
   kvtree_write_gather(filopath, filelist, comm);
 
   /* create directories */
-  rc = filo_create_dirs(num_files, dest_filelist, comm);
+  rc = filo_create_dirs(basepath, num_files, dest_filelist, comm);
 
   /* write files (via AXL) */
   int success = 1;
