@@ -41,11 +41,24 @@ int main(int argc, char* argv[])
   const char* filelist[1] = { filename };
   const char* dest_filelist[1] = { dest_filename };
 
-  filo_flush(1, filelist, dest_filelist, "mapfile", MPI_COMM_WORLD);
+  filo_flush("mapfile", NULL, 1, filelist, dest_filelist, MPI_COMM_WORLD);
 
   unlink(filename);
 
-  filo_fetch("mapfile", "/dev/shm", MPI_COMM_WORLD);
+  /* fetch list of files recorded in mapfile to /dev/shm */
+  int num_files;
+  char** src_filelist;
+  char** dst_filelist;
+  filo_fetch("mapfile", NULL, "/dev/shm", &num_files, &src_filelist, &dst_filelist, MPI_COMM_WORLD);
+
+  /* free file list returned by fetch */
+  int i;
+  for (i = 0; i < num_files; i++) {
+    free(src_filelist[i]);
+    free(dst_filelist[i]);
+  }
+  free(src_filelist);
+  free(dst_filelist);
 
   filo_finalize();
 
