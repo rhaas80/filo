@@ -378,7 +378,7 @@ static int filo_axl(int num_files, const char** src_filelist, const char** dest_
   /* TODO: allow user to name this transfer */
 
   /* define a transfer handle */
-  int id = AXL_Create("AXL_XFER_SYNC", "transfer");
+  int id = AXL_Create(AXL_XFER_SYNC, "transfer");
   if (id < 0) {
     filo_err("Failed to create AXL transfer handle @ %s:%d",
       __FILE__, __LINE__
@@ -436,8 +436,8 @@ static int filo_axl_start(const char* name, int num_files, const char** src_file
   kvtree* name_hash = kvtree_set_kv(filo_outstanding, FILO_KEY_OUT_NAME, name);
 
   /* define a transfer handle */
-  //int id = AXL_Create("AXL_XFER_ASYNC_DAEMON", "transfer");
-  int id = AXL_Create("AXL_XFER_SYNC", "transfer");
+  //int id = AXL_Create(AXL_XFER_ASYNC_DAEMON, "transfer");
+  int id = AXL_Create(AXL_XFER_SYNC, "transfer");
   if (id < 0) {
     filo_err("Failed to create AXL transfer handle @ %s:%d",
       __FILE__, __LINE__
