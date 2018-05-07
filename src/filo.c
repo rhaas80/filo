@@ -69,6 +69,11 @@
 #define FILO_KEY_CRC  "CRC"
 #define FILO_KEY_COMPLETE "COMPLETE"
 
+#define FILO_KEY_OUT_NAME "NAME"
+#define FILO_KEY_OUT_AXL  "AXL"
+
+static kvtree* filo_outstanding = NULL;
+
 static int filo_alltrue(int valid, MPI_Comm comm)
 {
   int all_valid;
@@ -199,6 +204,10 @@ int filo_init()
   if (AXL_Init(NULL) != AXL_SUCCESS) {
     return FILO_FAILURE;
   }
+
+  /* record state of outstanding transfers */
+  filo_outstanding = kvtree_new();
+
   return FILO_SUCCESS;
 }
 
@@ -207,6 +216,10 @@ int filo_finalize()
   if (AXL_Finalize() != AXL_SUCCESS) {
     return FILO_FAILURE;
   }
+
+  /* record state of outstanding transfers */
+  kvtree_delete(&filo_outstanding);
+
   return FILO_SUCCESS;
 }
 
@@ -411,6 +424,115 @@ static int filo_axl(int num_files, const char** src_filelist, const char** dest_
     );
     rc = FILO_FAILURE;
   }
+
+  return rc;
+}
+
+static int filo_axl_start(const char* name, int num_files, const char** src_filelist, const char** dest_filelist, MPI_Comm comm)
+{
+  int rc = FILO_SUCCESS;
+
+  /* create record for this transfer in outstanding list */
+  kvtree* name_hash = kvtree_set_kv(filo_outstanding, FILO_KEY_OUT_NAME, name);
+
+  /* define a transfer handle */
+  //int id = AXL_Create("AXL_XFER_ASYNC_DAEMON", "transfer");
+  int id = AXL_Create("AXL_XFER_SYNC", "transfer");
+  if (id < 0) {
+    filo_err("Failed to create AXL transfer handle @ %s:%d",
+      __FILE__, __LINE__
+    );
+    rc = FILO_FAILURE;
+  }
+
+  /* record AXL id in outstanding list */
+  kvtree_util_set_int(name_hash, FILO_KEY_OUT_AXL, id);
+
+  /* add files to transfer list */
+  int i;
+  for (i = 0; i < num_files; i++) {
+    const char* src_file  = src_filelist[i];
+    const char* dest_file = dest_filelist[i];
+    if (AXL_Add(id, src_file, dest_file) != AXL_SUCCESS) {
+      filo_err("Failed to add file to AXL transfer handle %d: %s --> %s @ %s:%d",
+        id, src_file, dest_file, __FILE__, __LINE__
+      );
+      rc = FILO_FAILURE;
+    }
+  }
+
+  /* kick off the transfer */
+  if (AXL_Dispatch(id) != AXL_SUCCESS) {
+    filo_err("Failed to dispatch AXL transfer handle %d @ %s:%d",
+      id, __FILE__, __LINE__
+    );
+    rc = FILO_FAILURE;
+  }
+
+  return rc;
+}
+
+static int filo_axl_test(const char* name, MPI_Comm comm)
+{
+  int rc = FILO_FAILURE;
+
+  /* lookup AXL id in outstanding list */
+  int id;
+  kvtree* name_hash = kvtree_get_kv(filo_outstanding, FILO_KEY_OUT_NAME, name);
+  if (kvtree_util_get_int(name_hash, FILO_KEY_OUT_AXL, &id) == KVTREE_SUCCESS) {
+    /* test whether transfer is still active */
+    if (AXL_Test(id) == AXL_SUCCESS) {
+      rc = FILO_SUCCESS;
+    }
+  }
+
+  return rc;
+}
+
+static int filo_axl_wait(const char* name, MPI_Comm comm)
+{
+  int rc = FILO_SUCCESS;
+
+  /* lookup AXL id in outstanding list */
+  int id;
+  kvtree* name_hash = kvtree_get_kv(filo_outstanding, FILO_KEY_OUT_NAME, name);
+  if (kvtree_util_get_int(name_hash, FILO_KEY_OUT_AXL, &id) == KVTREE_SUCCESS) {
+    /* test whether transfer is still active */
+    if (AXL_Wait(id) != AXL_SUCCESS) {
+      filo_err("Failed to test AXL transfer handle %d @ %s:%d",
+        id, __FILE__, __LINE__
+      );
+      rc = FILO_FAILURE;
+    }
+
+    /* release the handle */
+    if (AXL_Free(id) != AXL_SUCCESS) {
+      filo_err("Failed to free AXL transfer handle %d @ %s:%d",
+        id, __FILE__, __LINE__
+      );
+      rc = FILO_FAILURE;
+    }
+  } else {
+    /* failed to lookup id */
+    rc = FILO_FAILURE;
+  }
+
+  return rc;
+}
+
+static int filo_axl_stop(MPI_Comm comm)
+{
+  int rc = FILO_SUCCESS;
+
+#if 0
+  /* test whether transfer is still active */
+  if (AXL_Stop() != AXL_SUCCESS) {
+    filo_err("Failed to test AXL transfer handle %d @ %s:%d",
+      id, __FILE__, __LINE__
+    );
+    rc = FILO_FAILURE;
+  }
+#endif
 
   return rc;
 }
@@ -753,5 +875,102 @@ int filo_flush(
     rc = FILO_FAILURE;
   }
 
+  return rc;
+}
+
+int filo_flush_start(
+  const char* filopath,
+  const char* basepath,
+  int num_files,
+  const char** src_filelist,
+  const char** dest_filelist,
+  MPI_Comm comm)
+{
+  int rc = FILO_SUCCESS;
+
+  /* build a list of files for this rank */
+  int i;
+  kvtree* filelist = kvtree_new();
+  for (i = 0; i < num_files; i++) {
+    const char* filename = dest_filelist[i];
+
+    /* if basepath is valid, compute relative path,
+     * otherwise use dest path verbatim */
+    if (basepath != NULL) {
+      /* generate relateive path to destination file */
+      spath* base = spath_from_str(basepath);
+      spath* dest = spath_from_str(filename);
+      spath* rel = spath_relative(base, dest);
+      char* relfile = spath_strdup(rel);
+  
+      kvtree_set_kv(filelist, FILO_KEY_FILE, relfile);
+  
+      filo_free(&relfile);
+      spath_delete(&rel);
+      spath_delete(&dest);
+      spath_delete(&base);
+    } else {
+      /* use destination file name verbatim */
+      kvtree_set_kv(filelist, FILO_KEY_FILE, filename);
+    }
+  }
+
+  /* save our file list to disk */
+  kvtree_write_gather(filopath, filelist, comm);
+
+  /* free the list of files */
+  kvtree_delete(&filelist);
+
+  /* create directories */
+  rc = filo_create_dirs(basepath, num_files, dest_filelist, comm);
+
+  /* write files (via AXL) */
+  int success = 1;
+  if (filo_axl_start(filopath, num_files, src_filelist, dest_filelist, comm) != FILO_SUCCESS) {
+    success = 0;
+  }
+
+  /* check that all processes started to copy successfully */
+  if (! filo_alltrue(success, comm)) {
+    /* TODO: auto delete files? */
+    rc = FILO_FAILURE;
+  }
+
+  return rc;
+}
+
+int filo_flush_test(const char* filopath, MPI_Comm comm)
+{
+  int tmp_rc = filo_axl_test(filopath, comm);
+
+  /* check that all processes are done */
+  int rc = FILO_SUCCESS;
+  if (! filo_alltrue((tmp_rc == FILO_SUCCESS), comm)) {
+    rc = FILO_FAILURE;
+  }
+  return rc;
+}
+
+int filo_flush_wait(const char* filopath, MPI_Comm comm)
+{
+  int tmp_rc = filo_axl_wait(filopath, comm);
+
+  /* check that all processes are complete */
+  int rc = FILO_SUCCESS;
+  if (! filo_alltrue((tmp_rc == FILO_SUCCESS), comm)) {
+    rc = FILO_FAILURE;
+  }
+  return rc;
+}
+
+int filo_flush_stop(MPI_Comm comm)
+{
+  int tmp_rc = filo_axl_stop(comm);
+
+  /* check that all processes have stopped */
+  int rc = FILO_SUCCESS;
+  if (! filo_alltrue((tmp_rc == FILO_SUCCESS), comm)) {
+    rc = FILO_FAILURE;
+  }
   return rc;
 }

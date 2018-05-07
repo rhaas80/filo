@@ -66,4 +66,27 @@ int filo_flush(
   MPI_Comm comm               /* IN - communicator used for coordination and flow control */
 );
 
+int filo_flush_start(
+  const char* filopath,       /* IN - path to filo metadata file */
+  const char* basepath,       /* IN - store metadata file names relative to basepath if not NULL */
+  int num_files,              /* IN - number of files in source and dest lists */
+  const char** src_filelist,  /* IN - list of source paths */
+  const char** dest_filelist, /* IN - list of destination paths */
+  MPI_Comm comm               /* IN - communicator used for coordination and flow control */
+);
+
+int filo_flush_test(
+  const char* filopath,       /* IN - path to filo metadata file */
+  MPI_Comm comm               /* IN - communicator used for coordination and flow control */
+);
+
+int filo_flush_wait(
+  const char* filopath,       /* IN - path to filo metadata file */
+  MPI_Comm comm               /* IN - communicator used for coordination and flow control */
+);
+
+int filo_flush_stop(
+  MPI_Comm comm               /* IN - communicator used for coordination and flow control */
+);
+
 #endif /* FILO_H */
