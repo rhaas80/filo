@@ -18,10 +18,10 @@
 #define FILO_FAILURE (1)
 
 /* intialize the library */
-int filo_init();
+int Filo_Init();
 
 /* shut down the library */
-int filo_finalize();
+int Filo_Finalize();
 
 /* given a pointer to a filo file at filopath that was written by
  * filo_flush, copy files from their current location to path,
@@ -42,7 +42,7 @@ int filo_finalize();
  *    free(src_filelist);
  *    free(dest_filelist);
 */
-int filo_fetch(
+int Filo_Fetch(
   const char* filopath,  /* IN  - path to filo metadata file */
   const char* basepath,  /* IN  - prefix path to prepend to each source file */
   const char* path,      /* IN  - path to copies files to */
@@ -57,7 +57,7 @@ int filo_fetch(
  * file written to filopath, if basepath is not NULL, each
  * file is recorded relative to basepath, which makes a directory
  * of such files relocatable */
-int filo_flush(
+int Filo_Flush(
   const char* filopath,       /* IN - path to filo metadata file */
   const char* basepath,       /* IN - store metadata file names relative to basepath if not NULL */
   int num_files,              /* IN - number of files in source and dest lists */
@@ -66,7 +66,7 @@ int filo_flush(
   MPI_Comm comm               /* IN - communicator used for coordination and flow control */
 );
 
-int filo_flush_start(
+int Filo_Flush_start(
   const char* filopath,       /* IN - path to filo metadata file */
   const char* basepath,       /* IN - store metadata file names relative to basepath if not NULL */
   int num_files,              /* IN - number of files in source and dest lists */
@@ -75,17 +75,17 @@ int filo_flush_start(
   MPI_Comm comm               /* IN - communicator used for coordination and flow control */
 );
 
-int filo_flush_test(
+int Filo_Flush_test(
   const char* filopath,       /* IN - path to filo metadata file */
   MPI_Comm comm               /* IN - communicator used for coordination and flow control */
 );
 
-int filo_flush_wait(
+int Filo_Flush_wait(
   const char* filopath,       /* IN - path to filo metadata file */
   MPI_Comm comm               /* IN - communicator used for coordination and flow control */
 );
 
-int filo_flush_stop(
+int Filo_Flush_stop(
   MPI_Comm comm               /* IN - communicator used for coordination and flow control */
 );
 

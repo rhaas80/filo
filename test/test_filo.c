@@ -36,18 +36,18 @@ int main(int argc, char* argv[])
   char dest_filename[256];
   sprintf(dest_filename, "./testfile_%d.out", rank);
 
-  filo_init();
+  Filo_Init();
 
   const char* filelist[1] = { filename };
   const char* dest_filelist[1] = { dest_filename };
 
-  filo_flush(1, filelist, dest_filelist, "mapfile", MPI_COMM_WORLD);
+  Filo_Flush(1, filelist, dest_filelist, "mapfile", MPI_COMM_WORLD);
 
   unlink(filename);
 
-  filo_fetch("mapfile", "/dev/shm", MPI_COMM_WORLD);
+  Filo_Fetch("mapfile", "/dev/shm", MPI_COMM_WORLD);
 
-  filo_finalize();
+  Filo_Finalize();
 
   unlink(filename);
 

@@ -199,7 +199,7 @@ int filo_mkdir(const char* basepath, const char* dir, mode_t mode)
   return rc;
 }
 
-int filo_init()
+int Filo_Init()
 {
   if (AXL_Init(NULL) != AXL_SUCCESS) {
     return FILO_FAILURE;
@@ -211,7 +211,7 @@ int filo_init()
   return FILO_SUCCESS;
 }
 
-int filo_finalize()
+int Filo_Finalize()
 {
   if (AXL_Finalize() != AXL_SUCCESS) {
     return FILO_FAILURE;
@@ -636,7 +636,7 @@ static int filo_axl_sliding_window(
 }
 
 /* fetch files from parallel file system */
-int filo_fetch(
+int Filo_Fetch(
   const char* filopath,
   const char* basepath,
   const char* path,
@@ -817,7 +817,7 @@ static int filo_create_dirs(const char* basepath, int count, const char** dest_f
   return FILO_SUCCESS;
 }
 
-int filo_flush(
+int Filo_Flush(
   const char* filopath,
   const char* basepath,
   int num_files,
@@ -878,7 +878,7 @@ int filo_flush(
   return rc;
 }
 
-int filo_flush_start(
+int Filo_Flush_start(
   const char* filopath,
   const char* basepath,
   int num_files,
@@ -939,7 +939,7 @@ int filo_flush_start(
   return rc;
 }
 
-int filo_flush_test(const char* filopath, MPI_Comm comm)
+int Filo_Flush_test(const char* filopath, MPI_Comm comm)
 {
   int tmp_rc = filo_axl_test(filopath, comm);
 
@@ -951,7 +951,7 @@ int filo_flush_test(const char* filopath, MPI_Comm comm)
   return rc;
 }
 
-int filo_flush_wait(const char* filopath, MPI_Comm comm)
+int Filo_Flush_wait(const char* filopath, MPI_Comm comm)
 {
   int tmp_rc = filo_axl_wait(filopath, comm);
 
@@ -963,7 +963,7 @@ int filo_flush_wait(const char* filopath, MPI_Comm comm)
   return rc;
 }
 
-int filo_flush_stop(MPI_Comm comm)
+int Filo_Flush_stop(MPI_Comm comm)
 {
   int tmp_rc = filo_axl_stop(comm);
 
