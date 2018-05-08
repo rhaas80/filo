@@ -524,15 +524,13 @@ static int filo_axl_stop(MPI_Comm comm)
 {
   int rc = FILO_SUCCESS;
 
-#if 0
   /* test whether transfer is still active */
   if (AXL_Stop() != AXL_SUCCESS) {
-    filo_err("Failed to test AXL transfer handle %d @ %s:%d",
-      id, __FILE__, __LINE__
+    filo_err("Failed to stop AXL transfers @ %s:%d",
+      __FILE__, __LINE__
     );
     rc = FILO_FAILURE;
   }
-#endif
 
   return rc;
 }
