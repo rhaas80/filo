@@ -3,6 +3,11 @@
 
 #include "mpi.h"
 
+/* enable C++ codes to include this header directly */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define FILO_SUCCESS (0)
 #define FILO_FAILURE (1)
 
@@ -77,5 +82,10 @@ int Filo_Flush_wait(
 int Filo_Flush_stop(
   MPI_Comm comm               /* IN - communicator used for coordination and flow control */
 );
+
+/* enable C++ codes to include this header directly */
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif /* FILO_H */
