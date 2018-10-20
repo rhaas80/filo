@@ -961,3 +961,162 @@ int Filo_Flush_stop(MPI_Comm comm)
   }
   return rc;
 }
+
+Filo_Set* Filo_Set_new(int ranks)
+{
+  kvtree* hash = kvtree_new();
+  kvtree_util_set_int(hash, "RANKS", ranks);
+  return (Filo_Set*)hash;
+}
+
+int Filo_Set_add(Filo_Set* set, int rank, const char* file)
+{
+  int rc = FILO_SUCCESS;
+
+  kvtree* hash = (kvtree*)set;
+
+  /* read ranks value from set */
+  int ranks;
+  kvtree_util_get_int(hash, "RANKS", &ranks);
+
+  /* check that rank is in range */
+  if (rank >= 0 && rank < ranks) {
+    /* record file for this rank */
+    kvtree* rank_hash = kvtree_set_kv_int(hash, "RANK", rank);
+    kvtree_set_kv(rank_hash, FILO_KEY_FILE, file);
+  } else {
+    /* rank out of range */
+    rc = FILO_FAILURE;
+  }
+
+  return rc;
+}
+
+int Filo_Set_write(Filo_Set* set, const char* filopath, const char* basepath)
+{
+  int rc = FILO_SUCCESS;
+
+  kvtree* hash = (kvtree*)set;
+
+  /* read ranks value from set */
+  int ranks;
+  if (kvtree_util_get_int(hash, "RANKS", &ranks) != KVTREE_SUCCESS) {
+    return FILO_FAILURE;
+  }
+
+  /* create a new kvtree to copy data to since we'll modify file paths */
+  kvtree* newhash = kvtree_new();
+
+  spath* base = NULL;
+
+  /* create spath of basepath */
+  if (basepath != NULL) {
+    base = spath_from_str(basepath);
+    spath_reduce(base);
+  }
+
+  /* get pointer to rank region */
+  kvtree* rank_hash = kvtree_get(hash, "RANK");
+
+  /* sort in ascending order by rank */
+  kvtree_sort_int(rank_hash, KVTREE_SORT_ASCENDING);
+
+  /* loop over each rank in our set */
+  int expected_rank = 0;
+  kvtree_elem* rank_elem;
+  for (rank_elem = kvtree_elem_first(rank_hash);
+       rank_elem != NULL;
+       rank_elem = kvtree_elem_next(rank_elem))
+  {
+    /* get current rank value */
+    int rank = kvtree_elem_key_int(rank_elem);
+
+    /* add empty file lists for ranks that aren't specified */
+    while (expected_rank < rank) {
+      kvtree* empty = kvtree_new();
+      kvtree_setf(newhash, empty, "%d", expected_rank);
+      expected_rank++;
+    }
+
+    /* create empty hash to record list of files */
+    kvtree* newfiles_hash = kvtree_new();
+
+    /* for a given rank, loop over each file */
+    kvtree* files_hash = kvtree_elem_hash(rank_elem);
+    kvtree* files = kvtree_get(files_hash, FILO_KEY_FILE);
+    kvtree_elem* file_elem;
+    for (file_elem = kvtree_elem_first(files);
+         file_elem != NULL;
+         file_elem = kvtree_elem_next(file_elem))
+    {
+      /* get file name for this file */
+      const char* filename = kvtree_elem_key(file_elem);
+
+      /* simplify destination path */
+      spath* dest = spath_from_str(filename);
+      spath_reduce(dest);
+
+      if (basepath != NULL) {
+        /* generate relative path to destination file */
+        spath* rel = spath_relative(base, dest);
+        char* relfile = spath_strdup(rel);
+  
+        /* add to our list */
+        kvtree_set_kv(newfiles_hash, FILO_KEY_FILE, relfile);
+  
+        /* free destination and relative paths */
+        filo_free(&relfile);
+        spath_delete(&rel);
+      } else {
+        /* add to our list */
+        char* file = spath_strdup(dest);
+        kvtree_set_kv(newfiles_hash, FILO_KEY_FILE, file);
+        filo_free(&file);
+      }
+
+      spath_delete(&dest);
+    }
+
+    /* record files hash for this rank */
+    kvtree_setf(newhash, newfiles_hash, "%d", rank);
+
+    /* bump up to look for next rank */
+    expected_rank++;
+  }
+
+  /* add empty file lists for ranks that aren't specified */
+  while (expected_rank < ranks) {
+    kvtree* empty = kvtree_new();
+    kvtree_setf(newhash, empty, "%d", expected_rank);
+    expected_rank++;
+  }
+
+  /* check that user didn't exceed ranks in set */
+  if (expected_rank >= ranks) {
+    rc = FILO_FAILURE;
+  }
+
+  /* free the base path */
+  if (basepath != NULL) {
+    spath_delete(&base);
+  }
+
+  /* save to file */
+  if (kvtree_write_to_gather(filopath, newhash, ranks) != KVTREE_SUCCESS) {
+    rc = FILO_FAILURE;
+  }
+
+  /* free the temporary kvtree */
+  kvtree_delete(&newhash);
+
+  return rc;
+}
+
+int Filo_Set_delete(Filo_Set** pset)
+{
+  int rc = FILO_SUCCESS;
+  if (kvtree_delete((kvtree**)pset) != KVTREE_SUCCESS) {
+    rc = FILO_FAILURE;
+  }
+  return rc;
+}

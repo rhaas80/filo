@@ -53,7 +53,7 @@ int Filo_Fetch(
  * of such files relocatable */
 int Filo_Flush(
   const char* filopath,       /* IN - path to filo metadata file */
-  const char* basepath,       /* IN - store metadata file names relative to basepath if not NULL */
+  const char* basepath,       /* IN - store file names relative to basepath if not NULL */
   int num_files,              /* IN - number of files in source and dest lists */
   const char** src_filelist,  /* IN - list of source paths */
   const char** dest_filelist, /* IN - list of destination paths */
@@ -81,6 +81,39 @@ int Filo_Flush_wait(
 
 int Filo_Flush_stop(
   MPI_Comm comm               /* IN - communicator used for coordination and flow control */
+);
+
+/***********************
+ * Write metadata files using a single process
+ * for a filo set that can be read with Filo_Fetch
+ ***********************/
+
+/* define a type for Filo_Set objects */
+typedef void Filo_Set;
+
+/* return a newly allocated empty set */
+Filo_Set* Filo_Set_new(
+  int ranks /* IN  - number of ranks to be included in set */
+);
+
+/* add file to be owned by rank to set */
+int Filo_Set_add(
+  Filo_Set* set,   /* IN - set to add file to */
+  int rank,        /* IN - rank owning this file */
+  const char* file /* IN - path to file */
+);
+
+/* generate filo metadata corresponding to set,
+ * once written this metadata file can be used in Filo_Fetch */
+int Filo_Set_write(
+  Filo_Set* set,        /* IN - set to be written to file */
+  const char* filopath, /* IN - path to filo metadata file */
+  const char* basepath  /* IN - store file names in set relative to basepath if not NULL */
+);
+
+/* delete a set, and set pointer to NULL */
+int Filo_Set_delete(
+  Filo_Set** pset /* IN  - set to be deleted */
 );
 
 /* enable C++ codes to include this header directly */
