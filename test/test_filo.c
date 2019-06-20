@@ -12,10 +12,13 @@
 #include "mpi.h"
 #include "filo.h"
 
+#define TEST_PASS (0)
+#define TEST_FAIL (1)
+
 int main(int argc, char* argv[])
 {
+  int rc = TEST_PASS;
   MPI_Init(&argc, &argv);
-
   int rank, ranks;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &ranks);
@@ -30,18 +33,19 @@ int main(int argc, char* argv[])
     write(fd, buf, strlen(buf));
     close(fd);
   } else {
+    rc = TEST_FAIL;
     printf("Error opening file %s: %d %s\n", filename, errno, strerror(errno));
   }
 
   char dest_filename[256];
   sprintf(dest_filename, "./testfile_%d.out", rank);
 
-  Filo_Init();
+  rc = Filo_Init();
 
   const char* filelist[1] = { filename };
   const char* dest_filelist[1] = { dest_filename };
 
-  Filo_Flush("mapfile", NULL, 1, filelist, dest_filelist, MPI_COMM_WORLD);
+  rc = Filo_Flush("mapfile", NULL, 1, filelist, dest_filelist, MPI_COMM_WORLD);
 
   unlink(filename);
 
@@ -49,7 +53,7 @@ int main(int argc, char* argv[])
   int num_files;
   char** src_filelist;
   char** dst_filelist;
-  Filo_Fetch("mapfile", NULL, "/dev/shm", &num_files, &src_filelist, &dst_filelist, MPI_COMM_WORLD);
+  rc = Filo_Fetch("mapfile", NULL, "/dev/shm", &num_files, &src_filelist, &dst_filelist, MPI_COMM_WORLD);
 
   /* free file list returned by fetch */
   int i;
@@ -60,11 +64,11 @@ int main(int argc, char* argv[])
   free(src_filelist);
   free(dst_filelist);
 
-  Filo_Finalize();
+  rc = Filo_Finalize();
 
   unlink(filename);
 
   MPI_Finalize();
 
-  return 0;
+  return rc;
 }
