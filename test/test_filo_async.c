@@ -69,18 +69,19 @@ int main(int argc, char* argv[])
       printf("rank = %d, rank_from_file_name = %d\n", rank, rank_from_file_name);
     }
     //assertain that the file content is consistent with the process
-    FILE *file = fopen(filename, "r");
+    FILE *file = fopen(dst_filelist[i], "r");
     char *readContent = NULL;
     size_t readContent_size = 0;
     if (!file){
       rc = TEST_FAIL;
-      printf("Error opening file %s: %d %s\n", filename, errno, strerror(errno));
+      printf("Error opening file %s: %d %s\n", dst_filelist[i] , errno, strerror(errno));
     }
     size_t line_size = getline(&readContent, &readContent_size, file);
     if (strcmp(readContent, proc_specific_file_content) != 0){
       rc = TEST_FAIL;
       printf("flushed file content = %s, fetched file content = %s\n", proc_specific_file_content, readContent);
     }
+    fclose(file);
 
     free(src_filelist[i]);
     free(dst_filelist[i]);
