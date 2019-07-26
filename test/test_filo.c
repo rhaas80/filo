@@ -46,11 +46,6 @@ int main(int argc, char* argv[])
 
   /* base path for storage is NULL, so destination files will be written to the local dir*/
   rc = Filo_Flush("mapfile", NULL, 1, filelist, dest_filelist, MPI_COMM_WORLD);
-//printf("pre-fetch src file name is %s\n", filelist[0]);
-//printf("pre-fetch dst_file name is %s\n", dest_filelist[0]);
-////in file name, rank precedes ".out" suffix
-//int rank_from_file_name = *((strstr(dest_filelist[0], ".out"))-1) - '0';
-//printf("char at .out is %d\n",rank_from_file_name);
 
   unlink(filename);
 

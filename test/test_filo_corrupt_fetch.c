@@ -46,8 +46,6 @@ int main(int argc, char* argv[])
 
   /* base path for storage is NULL, so destination files will be written to the local dir*/
   rc = Filo_Flush("mapfile", NULL, 1, filelist, dest_filelist, MPI_COMM_WORLD);
-printf("pre-fetch src file name is %s\n", filelist[0]);
-printf("pre-fetch dst_file name is %s\n", dest_filelist[0]);
 
   //remove one of the flush destination files. This should result in Filo_Fetch returning error on ALL processes.
   if(rank == 1) unlink(dest_filename);
