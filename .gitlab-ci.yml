@@ -1,0 +1,9 @@
+job:
+  tags:
+    - quartz
+    - shell
+  script:
+    - module load cmake/3.9.2
+    - cmake -DWITH_KVTREE_PREFIX=$HOME/kvtree/KVTree.git/install -DWITH_SPATH_PREFIX=$HOME/spath/install -DWITH_AXL_PREFIX=$HOME/axl/AXL.git/install -DMPI=ON
+    - make VERBOSE=1
+    - make check

@@ -45,7 +45,9 @@ int main(int argc, char* argv[])
   const char* dest_filelist[1] = { dest_filename };
 
   /* base path for storage is NULL, so destination files will be written to the local dir*/
-  rc = Filo_Flush("mapfile", NULL, 1, filelist, dest_filelist, MPI_COMM_WORLD);
+  rc = Filo_Flush_start("mapfile", NULL, 1, filelist, dest_filelist, MPI_COMM_WORLD);
+  rc = Filo_Flush_test("mapfile", MPI_COMM_WORLD);
+  rc = Filo_Flush_wait("mapfile", MPI_COMM_WORLD);
 
   unlink(filename);
 
@@ -72,15 +74,15 @@ int main(int argc, char* argv[])
     size_t readContent_size = 0;
     if (!file){
       rc = TEST_FAIL;
-      printf("Error opening file %s: %d %s\n", dst_filelist[i], errno, strerror(errno));
+      printf("Error opening file %s: %d %s\n", dst_filelist[i] , errno, strerror(errno));
     }
     size_t line_size = getline(&readContent, &readContent_size, file);
     if (strcmp(readContent, proc_specific_file_content) != 0){
       rc = TEST_FAIL;
       printf("flushed file content = %s, fetched file content = %s\n", proc_specific_file_content, readContent);
     }
-
     fclose(file);
+
     free(src_filelist[i]);
     free(dst_filelist[i]);
   }

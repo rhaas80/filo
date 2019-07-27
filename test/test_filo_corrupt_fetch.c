@@ -47,6 +47,9 @@ int main(int argc, char* argv[])
   /* base path for storage is NULL, so destination files will be written to the local dir*/
   rc = Filo_Flush("mapfile", NULL, 1, filelist, dest_filelist, MPI_COMM_WORLD);
 
+  //remove one of the flush destination files. This should result in Filo_Fetch returning error on ALL processes.
+  if(rank == 1) unlink(dest_filename);
+
   unlink(filename);
 
   /* fetch list of files recorded in mapfile to /dev/shm */
@@ -54,42 +57,12 @@ int main(int argc, char* argv[])
   char** src_filelist;
   char** dst_filelist;
   /* src base path is still NULL (consistent with Filo_Flush), but the dest base path is /dev/shm*/
-  rc = Filo_Fetch("mapfile", NULL, "/dev/shm", &num_files, &src_filelist, &dst_filelist, MPI_COMM_WORLD);
-
-  /* free file list returned by fetch */
-  int i;
-  for (i = 0; i < num_files; i++) {
-    //in file name, rank precedes ".out" suffix
-    int rank_from_file_name = *((strstr(dst_filelist[i], ".out"))-1) - '0';
-    //assertain that the filename with consistant process marker was passed through flush/fetch
-    if(rank != rank_from_file_name){
-      rc = TEST_FAIL;
-      printf("rank = %d, rank_from_file_name = %d\n", rank, rank_from_file_name);
-    }
-    //assertain that the file content is consistent with the process
-    FILE *file = fopen(dst_filelist[i], "r");
-    char *readContent = NULL;
-    size_t readContent_size = 0;
-    if (!file){
-      rc = TEST_FAIL;
-      printf("Error opening file %s: %d %s\n", dst_filelist[i], errno, strerror(errno));
-    }
-    size_t line_size = getline(&readContent, &readContent_size, file);
-    if (strcmp(readContent, proc_specific_file_content) != 0){
-      rc = TEST_FAIL;
-      printf("flushed file content = %s, fetched file content = %s\n", proc_specific_file_content, readContent);
-    }
-
-    fclose(file);
-    free(src_filelist[i]);
-    free(dst_filelist[i]);
+  int filo_ret = Filo_Fetch("mapfile", NULL, "/dev/shm", &num_files, &src_filelist, &dst_filelist, MPI_COMM_WORLD);
+  //check if the return value is error -- which is the correct behavior -- otherwise return fail
+  if(filo_ret ==0){
+    printf("Error: Filo_Fetch should fail because rank 1 destination file was removed pre- fetch. rank = %d, filo_ret = %d\n", rank, filo_ret);
+    rc = TEST_FAIL;
   }
-  free(src_filelist);
-  free(dst_filelist);
-
-  rc = Filo_Finalize();
-
-  unlink(filename);
 
   MPI_Finalize();
 

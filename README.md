@@ -1,4 +1,7 @@
 ## Filo
+
+[![Build Status](https://api.travis-ci.org/ECP-VeloC/filo.png?branch=master)](https://travis-ci.org/ECP-VeloC/filo)
+
 This module uses AXL to transfer files between local storage and a global file system.
 The transfer from local storage to global storage is called a "flush" and the reverse transfer is called a "fetch".
 During a flush, filo associates each file with its owner MPI rank, and it records this association in a metadata file.
@@ -47,12 +50,16 @@ To build dependencies:
 
 To build filo:
 
-    cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=./install -DWITH_KVTREE_PREFIX=`pwd`/install -DWITH_AXL_PREFIX=`pwd`/install .
+    cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=./install -DWITH_KVTREE_PREFIX=`pwd`/install -DWITH_AXL_PREFIX=`pwd`/install -DWITH_SPATH_PREFIX=`pwd`/install .
     make
     make install
 
 # Testing
 Some simple test programs exist in the test directory.
+
+All the tests can be run with:
+
+    make check
 
 To build a test for the filo API:
 
