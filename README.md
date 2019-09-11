@@ -9,7 +9,7 @@ This metadata file is read during a "fetch" to copy each file back into local st
 Filo also flow controls the number of MPI ranks reading or writing data at a time.
 During a flush, filo creates destination directories as necessary.
 
-For usage, see [src/filo.h](src/filo.h) and [test/test\_filo.c](test/test_filo.c).
+For usage, see [src/filo.h](src/filo.h), [test/test\_filo.c](test/test_filo.c), and the [API User Docs](https://ecp-veloc.github.io/component-user-docs/group__filo.html).
 
 # Building
 
