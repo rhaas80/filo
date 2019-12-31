@@ -360,14 +360,62 @@ static int filo_fetch_files_list(
 }
 #endif
 
-static int filo_axl(int num_files, const char** src_filelist, const char** dest_filelist)
+/* 
+ * Given an AXL transfer string (like "bbapi") return a axl_xfer_t.
+ *
+ * Default to "pthread" if axl_xfer_str = NULL, since it has good performance
+ * and works across all filesystems.
+ */
+static axl_xfer_t
+axl_xfer_str_to_type(const char *axl_xfer_str)
+{
+    int i;
+    struct {
+        char *str;
+        axl_xfer_t type;
+    } axl_str_to_type[] = {
+        {"default", AXL_XFER_DEFAULT},
+        {"native", AXL_XFER_NATIVE},
+        {"pthread", AXL_XFER_PTHREAD},
+        {"sync", AXL_XFER_SYNC},
+        {"dw", AXL_XFER_ASYNC_DW},
+        {"bbapi", AXL_XFER_ASYNC_BBAPI},
+        {"cprr", AXL_XFER_ASYNC_CPPR},
+        {"AXL_XFER_SYNC", AXL_XFER_SYNC},
+        {"AXL_XFER_PTHREAD", AXL_XFER_PTHREAD},
+        {"AXL_XFER_ASYNC_DW", AXL_XFER_ASYNC_DW},
+        {"AXL_XFER_ASYNC_BBAPI", AXL_XFER_ASYNC_BBAPI},
+        {"AXL_XFER_ASYNC_CPPR", AXL_XFER_ASYNC_CPPR},
+    };
+    axl_xfer_t type;
+
+    if (!axl_xfer_str) 
+        axl_xfer_str = "pthread";
+
+    type = AXL_XFER_NULL;
+    for (i = 0; i < sizeof (axl_str_to_type); i++) {
+        if (strncmp(axl_xfer_str, axl_str_to_type[i].str,
+            strlen(axl_str_to_type[i].str)) == 0) {
+            /* Match */
+            type = axl_str_to_type[i].type;
+            break;
+        }
+    }
+    return type;
+}
+
+static int filo_axl(int num_files, const char** src_filelist,
+    const char** dest_filelist, const char *axl_xfer_str)
 {
   int rc = FILO_SUCCESS;
+  axl_xfer_t type;
 
   /* TODO: allow user to name this transfer */
 
+
+  type = axl_xfer_str_to_type(axl_xfer_str);
   /* define a transfer handle */
-  int id = AXL_Create(AXL_XFER_SYNC, "transfer");
+  int id = AXL_Create(type, "transfer");
   if (id < 0) {
     filo_err("Failed to create AXL transfer handle @ %s:%d",
       __FILE__, __LINE__
@@ -417,16 +465,20 @@ static int filo_axl(int num_files, const char** src_filelist, const char** dest_
   return rc;
 }
 
-static int filo_axl_start(const char* name, int num_files, const char** src_filelist, const char** dest_filelist, MPI_Comm comm)
+static int filo_axl_start(const char* name, int num_files,
+  const char** src_filelist, const char** dest_filelist, MPI_Comm comm,
+  const char* axl_xfer_str)
 {
   int rc = FILO_SUCCESS;
+  axl_xfer_t type;
 
   /* create record for this transfer in outstanding list */
   kvtree* name_hash = kvtree_set_kv(filo_outstanding, FILO_KEY_OUT_NAME, name);
 
   /* define a transfer handle */
   //int id = AXL_Create(AXL_XFER_ASYNC_DAEMON, "transfer");
-  int id = AXL_Create(AXL_XFER_SYNC, "transfer");
+  type = axl_xfer_str_to_type(axl_xfer_str);
+  int id = AXL_Create(type, "transfer");
   if (id < 0) {
     filo_err("Failed to create AXL transfer handle @ %s:%d",
       __FILE__, __LINE__
@@ -526,13 +578,20 @@ static int filo_axl_stop(MPI_Comm comm)
 
 static int filo_window_width = 256;
 
-/* fetch files specified in file_list into specified dir and update
- * filemap */
+/*
+ * Fetch files specified in file_list into specified dir and update
+ * filemap.
+ *
+ * axl_xfer_str:    Optional AXL transfer string to tell what kind of transfer
+ *                  type to use ("sync", "pthread", "bbapi", etc..).  Defaults to
+ *                  "default" if NULL.
+ */
 static int filo_axl_sliding_window(
   int num_files,
   const char** src_filelist,
   const char** dest_filelist,
-  MPI_Comm comm)
+  MPI_Comm comm,
+  const char *axl_xfer_str)
 {
   int success = FILO_SUCCESS;
 
@@ -541,10 +600,14 @@ static int filo_axl_sliding_window(
   MPI_Comm_rank(comm, &rank_world);
   MPI_Comm_size(comm, &ranks_world);
 
+  if (!axl_xfer_str) {
+    axl_xfer_str = "default";
+  }
+
   /* flow control rate of file reads from rank 0 */
   if (rank_world == 0) {
     /* fetch these files into the directory */
-    if (filo_axl(num_files, src_filelist, dest_filelist) != FILO_SUCCESS) {
+    if (filo_axl(num_files, src_filelist, dest_filelist, axl_xfer_str) != FILO_SUCCESS) {
       success = FILO_FAILURE;
     }
 
@@ -606,7 +669,8 @@ static int filo_axl_sliding_window(
     /* if rank 0 hasn't seen a failure, try to read in our files */
     if (success == FILO_SUCCESS) {
       /* fetch these files into the directory */
-      if (filo_axl(num_files, src_filelist, dest_filelist) != FILO_SUCCESS) {
+      if (filo_axl(num_files, src_filelist, dest_filelist, axl_xfer_str)
+          != FILO_SUCCESS) {
         success = FILO_FAILURE;
       }
     }
@@ -622,7 +686,14 @@ static int filo_axl_sliding_window(
   return FILO_FAILURE;
 }
 
-/* fetch files from parallel file system */
+
+/*
+ * Fetch files from parallel file system
+ *
+ * axl_xfer_str:    Optional AXL transfer string to tell what kind of transfer
+ *                  type to use ("sync", "pthread", "bbapi", etc..).  Defaults to
+ *                  "default" if NULL.
+ */
 int Filo_Fetch(
   const char* filopath,
   const char* basepath,
@@ -630,7 +701,8 @@ int Filo_Fetch(
   int* out_num_files,
   char*** out_src_filelist,
   char*** out_dest_filelist,
-  MPI_Comm comm)
+  MPI_Comm comm,
+  const char *axl_xfer_str)
 {
   int rc = FILO_SUCCESS;
 
@@ -687,7 +759,8 @@ int Filo_Fetch(
 
   /* now we can finally fetch the actual files */
   int success = 1;
-  if (filo_axl_sliding_window(count, src_filelist, dest_filelist, comm) != FILO_SUCCESS) {
+  if (filo_axl_sliding_window(count, src_filelist, dest_filelist, comm,
+        axl_xfer_str) != FILO_SUCCESS) {
     success = 0;
   }
 
@@ -804,13 +877,20 @@ static int filo_create_dirs(const char* basepath, int count, const char** dest_f
   return FILO_SUCCESS;
 }
 
+/*
+ * Flush files to the parallel file system
+ *
+ * axl_xfer_str: The AXL transfer type you want to use for your transfer
+ *               (like "default", "sync", "pthread", "bbapi", etc).
+ */
 int Filo_Flush(
   const char* filopath,
   const char* basepath,
   int num_files,
   const char** src_filelist,
   const char** dest_filelist,
-  MPI_Comm comm)
+  MPI_Comm comm,
+  const char *axl_xfer_str)
 {
   int rc = FILO_SUCCESS;
 
@@ -828,9 +908,9 @@ int Filo_Flush(
       spath* dest = spath_from_str(filename);
       spath* rel = spath_relative(base, dest);
       char* relfile = spath_strdup(rel);
-  
+
       kvtree_set_kv(filelist, FILO_KEY_FILE, relfile);
-  
+
       filo_free(&relfile);
       spath_delete(&rel);
       spath_delete(&dest);
@@ -849,7 +929,8 @@ int Filo_Flush(
 
   /* write files (via AXL) */
   int success = 1;
-  if (filo_axl_sliding_window(num_files, src_filelist, dest_filelist, comm) != FILO_SUCCESS) {
+  if (filo_axl_sliding_window(num_files, src_filelist, dest_filelist, comm,
+    axl_xfer_str) != FILO_SUCCESS) {
     success = 0;
   }
 
@@ -871,7 +952,8 @@ int Filo_Flush_start(
   int num_files,
   const char** src_filelist,
   const char** dest_filelist,
-  MPI_Comm comm)
+  MPI_Comm comm,
+  const char *axl_xfer_str)
 {
   int rc = FILO_SUCCESS;
 
@@ -889,9 +971,9 @@ int Filo_Flush_start(
       spath* dest = spath_from_str(filename);
       spath* rel = spath_relative(base, dest);
       char* relfile = spath_strdup(rel);
-  
+
       kvtree_set_kv(filelist, FILO_KEY_FILE, relfile);
-  
+
       filo_free(&relfile);
       spath_delete(&rel);
       spath_delete(&dest);
@@ -913,7 +995,8 @@ int Filo_Flush_start(
 
   /* write files (via AXL) */
   int success = 1;
-  if (filo_axl_start(filopath, num_files, src_filelist, dest_filelist, comm) != FILO_SUCCESS) {
+  if (filo_axl_start(filopath, num_files, src_filelist, dest_filelist, comm,
+    axl_xfer_str) != FILO_SUCCESS) {
     success = 0;
   }
 
@@ -1060,10 +1143,10 @@ int Filo_Set_write(Filo_Set* set, const char* filopath, const char* basepath)
         /* generate relative path to destination file */
         spath* rel = spath_relative(base, dest);
         char* relfile = spath_strdup(rel);
-  
+
         /* add to our list */
         kvtree_set_kv(newfiles_hash, FILO_KEY_FILE, relfile);
-  
+
         /* free destination and relative paths */
         filo_free(&relfile);
         spath_delete(&rel);

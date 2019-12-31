@@ -10,12 +10,12 @@ FIND_PATH(WITH_AXL_PREFIX
 
 FIND_LIBRARY(AXL_LIBRARIES
     NAMES axl
-    HINTS ${WITH_AXL_PREFIX}/lib
+    HINTS ${WITH_AXL_PREFIX}/lib install/lib64
 )
 
 FIND_PATH(AXL_INCLUDE_DIRS
     NAMES axl.h
-    HINTS ${WITH_AXL_PREFIX}/include
+    HINTS ${WITH_AXL_PREFIX}/include install/include
 )
 
 INCLUDE(FindPackageHandleStandardArgs)

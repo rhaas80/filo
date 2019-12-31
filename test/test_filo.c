@@ -40,12 +40,12 @@ int main(int argc, char* argv[])
   sprintf(dest_filename, "./testfile_%d.out", rank);
 
   rc = Filo_Init();
-
   const char* filelist[1] = { filename };
   const char* dest_filelist[1] = { dest_filename };
 
   /* base path for storage is NULL, so destination files will be written to the local dir*/
-  rc = Filo_Flush("mapfile", NULL, 1, filelist, dest_filelist, MPI_COMM_WORLD);
+  rc = Filo_Flush("mapfile", NULL, 1, filelist, dest_filelist,
+    MPI_COMM_WORLD, "pthread");
 
   unlink(filename);
 
@@ -54,7 +54,8 @@ int main(int argc, char* argv[])
   char** src_filelist;
   char** dst_filelist;
   /* src base path is still NULL (consistent with Filo_Flush), but the dest base path is /dev/shm*/
-  rc = Filo_Fetch("mapfile", NULL, "/dev/shm", &num_files, &src_filelist, &dst_filelist, MPI_COMM_WORLD);
+  rc = Filo_Fetch("mapfile", NULL, "/dev/shm", &num_files, &src_filelist,
+    &dst_filelist, MPI_COMM_WORLD, "pthread");
 
   /* free file list returned by fetch */
   int i;

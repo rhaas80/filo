@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
   const char* dest_filelist[1] = { dest_filename };
 
   /* base path for storage is NULL, so destination files will be written to the local dir*/
-  rc = Filo_Flush("mapfile", NULL, 1, filelist, dest_filelist, MPI_COMM_WORLD);
+  rc = Filo_Flush("mapfile", NULL, 1, filelist, dest_filelist, MPI_COMM_WORLD, NULL);
 
   //remove one of the flush destination files. This should result in Filo_Fetch returning error on ALL processes.
   if(rank == 1) unlink(dest_filename);
@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
   char** src_filelist;
   char** dst_filelist;
   /* src base path is still NULL (consistent with Filo_Flush), but the dest base path is /dev/shm*/
-  int filo_ret = Filo_Fetch("mapfile", NULL, "/dev/shm", &num_files, &src_filelist, &dst_filelist, MPI_COMM_WORLD);
+  int filo_ret = Filo_Fetch("mapfile", NULL, "/dev/shm", &num_files, &src_filelist, &dst_filelist, MPI_COMM_WORLD, NULL);
   //check if the return value is error -- which is the correct behavior -- otherwise return fail
   if(filo_ret ==0){
     printf("Error: Filo_Fetch should fail because rank 1 destination file was removed pre- fetch. rank = %d, filo_ret = %d\n", rank, filo_ret);
