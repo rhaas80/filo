@@ -26,11 +26,14 @@ extern "C" {
 #define FILO_SUCCESS (0)
 #define FILO_FAILURE (1)
 
-/** intialize the library */
+/** initialize the library */
 int Filo_Init();
 
 /** shut down the library */
 int Filo_Finalize();
+
+/** Set a FILO config parameter */
+int Filo_Config(char *config_str);
 
 /** given a pointer to a filo file at filopath that was written by
  * filo_flush, copy files from their current location to path,
@@ -58,7 +61,8 @@ int Filo_Fetch(
   int* num_files,        /**< [OUT] - number of files copied */
   char*** src_filelist,  /**< [OUT] - full source path of each file copied */
   char*** dest_filelist, /**< [OUT] - full destination path of each file copied */
-  MPI_Comm comm          /**< [IN]  - communicator used for coordination and flow control */
+  MPI_Comm comm,         /**< [IN]  - communicator used for coordination and flow control */
+  const char *axl_xfer_str  /**< [IN]  - AXL transfer type ("sync", "pthread", "bbapi", etc) */
 );
 
 /** copies the list of source files to their corresponding
@@ -72,7 +76,8 @@ int Filo_Flush(
   int num_files,              /**< [IN] - number of files in source and dest lists */
   const char** src_filelist,  /**< [IN] - list of source paths */
   const char** dest_filelist, /**< [IN] - list of destination paths */
-  MPI_Comm comm               /**< [IN] - communicator used for coordination and flow control */
+  MPI_Comm comm,              /**< [IN] - communicator used for coordination and flow control */
+  const char *axl_xfer_str  /**< [IN] - AXL transfer type ("sync", "pthread", "bbapi", etc) */
 );
 
 int Filo_Flush_start(
@@ -81,7 +86,8 @@ int Filo_Flush_start(
   int num_files,              /**< [IN] - number of files in source and dest lists */
   const char** src_filelist,  /**< [IN] - list of source paths */
   const char** dest_filelist, /**< [IN] - list of destination paths */
-  MPI_Comm comm               /**< [IN] - communicator used for coordination and flow control */
+  MPI_Comm comm,              /**< [IN] - communicator used for coordination and flow control */
+  const char *axl_xfer_str    /**< [IN]  - AXL transfer type ("sync", "pthread", "bbapi", etc) */
 );
 
 int Filo_Flush_test(

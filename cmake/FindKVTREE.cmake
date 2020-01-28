@@ -10,12 +10,12 @@ FIND_PATH(WITH_KVTREE_PREFIX
 
 FIND_LIBRARY(KVTREE_LIBRARIES
     NAMES kvtree
-    HINTS ${WITH_KVTREE_PREFIX}/lib
+    HINTS ${WITH_KVTREE_PREFIX}/lib install/lib64
 )
 
 FIND_PATH(KVTREE_INCLUDE_DIRS
     NAMES kvtree.h
-    HINTS ${WITH_KVTREE_PREFIX}/include
+    HINTS ${WITH_KVTREE_PREFIX}/include install/include
 )
 
 INCLUDE(FindPackageHandleStandardArgs)

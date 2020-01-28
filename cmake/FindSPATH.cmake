@@ -10,12 +10,12 @@ FIND_PATH(WITH_SPATH_PREFIX
 
 FIND_LIBRARY(SPATH_LIBRARIES
     NAMES spath
-    HINTS ${WITH_SPATH_PREFIX}/lib
+    HINTS ${WITH_SPATH_PREFIX}/lib install/lib64
 )
 
 FIND_PATH(SPATH_INCLUDE_DIRS
     NAMES spath.h
-    HINTS ${WITH_SPATH_PREFIX}/include
+    HINTS ${WITH_SPATH_PREFIX}/include install/include
 )
 
 INCLUDE(FindPackageHandleStandardArgs)

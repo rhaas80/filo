@@ -15,42 +15,13 @@ For usage, see [src/filo.h](src/filo.h), [test/test\_filo.c](test/test_filo.c), 
 
 To build dependencies:
 
-    git clone git@github.com:ECP-VeloC/KVTree.git  KVTree.git
-    git clone git@github.com:ECP-VeloC/AXL.git     AXL.git
-    git clone git@github.com:ECP-VeloC/spath.git   spath.git
-
-    mkdir install
-
-    mkdir build
-    cd build
-    cmake -DCMAKE_INSTALL_PREFIX=../install -DMPI=ON ../KVTree.git
-    make clean
-    make
-    make install
-    make test
-    cd ..
-
-    rm -rf build
-    mkdir build
-    cd build
-    cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=../install ../AXL.git
-    make clean
-    make
-    make install
-    cd ..
-
-    rm -rf build
-    mkdir build
-    cd build
-    cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=../install ../spath.git
-    make clean
-    make
-    make install
-    cd ..
+    ./bootstrap.sh
 
 To build filo:
 
-    cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=./install -DWITH_KVTREE_PREFIX=`pwd`/install -DWITH_AXL_PREFIX=`pwd`/install -DWITH_SPATH_PREFIX=`pwd`/install .
+    mkdir build
+    cd build
+    cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=../install ..
     make
     make install
 
@@ -63,7 +34,7 @@ All the tests can be run with:
 
 To build a test for the filo API:
 
-    mpicc -g -O0 -o test_filo test_filo.c -I../install/include -L../install/lib64 -I../src -L../src -lkvtree -laxl -lspath -lfilo
+    mpicc -g -O0 -o test_filo ../test/test_filo.c -I../install/include -L../install/lib64 -I../src -L../src -lkvtree -laxl -lspath -lfilo
 
 ## Release
 

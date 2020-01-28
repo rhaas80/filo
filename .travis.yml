@@ -2,8 +2,6 @@ langauge: c
 dist: trusty
 
 compiler:
-  - gcc
-  - clang
 
 matrix:
   include:
