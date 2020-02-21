@@ -61,6 +61,9 @@
 #define FILO_KEY_OUT_NAME "NAME"
 #define FILO_KEY_OUT_AXL  "AXL"
 
+/* Return the number of elements in an array */
+#define ARRAY_SIZE(a) (sizeof(a)/sizeof(a[0]))
+
 static kvtree* filo_outstanding = NULL;
 
 static int filo_alltrue(int valid, MPI_Comm comm)
@@ -393,9 +396,8 @@ axl_xfer_str_to_type(const char *axl_xfer_str)
         axl_xfer_str = "pthread";
 
     type = AXL_XFER_NULL;
-    for (i = 0; i < sizeof (axl_str_to_type); i++) {
-        if (strncmp(axl_xfer_str, axl_str_to_type[i].str,
-            strlen(axl_str_to_type[i].str)) == 0) {
+    for (i = 0; i < ARRAY_SIZE(axl_str_to_type); i++) {
+        if (strcmp(axl_xfer_str, axl_str_to_type[i].str) == 0) {
             /* Match */
             type = axl_str_to_type[i].type;
             break;
