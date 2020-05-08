@@ -749,21 +749,36 @@ int Filo_Fetch(
     }
 
     /* compute and strdup detination name into dest list */
-    char destname[1024];
-    char* file2 = strdup(file);
-    char* name = basename(file2);
-    snprintf(destname, sizeof(destname), "%s/%s", path, name);
-    dest_filelist[i] = strdup(destname);
-    filo_free(&file2);
+    if (path == NULL) {
+      dest_filelist[i] = strdup(src_filelist[i]);
+    } else {
+      char destname[1024];
+      char* file2 = strdup(file);
+      char* name = basename(file2);
+      snprintf(destname, sizeof(destname), "%s/%s", path, name);
+      dest_filelist[i] = strdup(destname);
+      filo_free(&file2);
+    }
 
     i++;
   }
 
   /* now we can finally fetch the actual files */
   int success = 1;
-  if (filo_axl_sliding_window(count, src_filelist, dest_filelist, comm,
-        axl_xfer_str) != FILO_SUCCESS) {
-    success = 0;
+  if (path != NULL) {
+    if (filo_axl_sliding_window(count, src_filelist, dest_filelist, comm,
+          axl_xfer_str) != FILO_SUCCESS) {
+      success = 0;
+    }
+  } else {
+    /* just stat the file to check that it exists */
+    for (i = 0; i < count; i++) {
+      if (access(src_filelist[i], R_OK) < 0) {
+        /* either can't read this file or it doesn't exist */
+        success = 0;
+        break;
+      }
+    }
   }
 
 #if 0
@@ -896,11 +911,19 @@ int Filo_Flush(
 {
   int rc = FILO_SUCCESS;
 
+  /* we can skip transfer if all paths match */
+  int skip_transfer = 1;
+
   /* build a list of files for this rank */
   int i;
   kvtree* filelist = kvtree_new();
   for (i = 0; i < num_files; i++) {
     const char* filename = dest_filelist[i];
+
+    /* found a source and destination path that are different */
+    if (strcmp(src_filelist[i], filename) != 0) {
+      skip_transfer = 0;
+    }
 
     /* if basepath is valid, compute relative path,
      * otherwise use dest path verbatim */
@@ -926,14 +949,26 @@ int Filo_Flush(
   /* save our file list to disk */
   kvtree_write_gather(filopath, filelist, comm);
 
-  /* create directories */
-  rc = filo_create_dirs(basepath, num_files, dest_filelist, comm);
-
-  /* write files (via AXL) */
+  /* after writing out file above, see if we can skip the transfer */
   int success = 1;
-  if (filo_axl_sliding_window(num_files, src_filelist, dest_filelist, comm,
-    axl_xfer_str) != FILO_SUCCESS) {
-    success = 0;
+  if (! filo_alltrue(skip_transfer, comm)) {
+    /* create directories */
+    rc = filo_create_dirs(basepath, num_files, dest_filelist, comm);
+
+    /* write files (via AXL) */
+    if (filo_axl_sliding_window(num_files, src_filelist, dest_filelist, comm,
+      axl_xfer_str) != FILO_SUCCESS) {
+      success = 0;
+    }
+  } else {
+    /* just stat the file to check that it exists */
+    for (i = 0; i < num_files; i++) {
+      if (access(src_filelist[i], R_OK) < 0) {
+        /* either can't read this file or it doesn't exist */
+        success = 0;
+        break;
+      }
+    }
   }
 
   /* free the list of files */
