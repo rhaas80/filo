@@ -152,8 +152,22 @@ int filo_mkdir(const char* basepath, const char* dir, mode_t mode)
    * so we need to strdup both the argument and the return string. */
 
   /* extract leading path from dir = full path - basename */
-  char* dircopy = strdup(dir);
-  char* path    = strdup(dirname(dircopy));
+  char* dircopy;
+  char* path;
+
+  rc = mkdir(dir, mode);
+
+  if (rc < 0 && errno == EEXIST) {
+      /* don't complain about mkdir for a directory that already exists */
+      return FILO_SUCCESS;
+  } else if (rc == 0) {
+      /* successfully created the directory */
+      return FILO_SUCCESS;
+  }
+
+  rc = FILO_SUCCESS;
+  dircopy = strdup(dir);
+  path = strdup(dirname(dircopy));
 
   /* if we can read path or path=="." or path=="/", then there's nothing to do,
    * otherwise, try to create it */
@@ -181,8 +195,8 @@ int filo_mkdir(const char* basepath, const char* dir, mode_t mode)
       }
     }
   } else {
-    printf("Cannot write to directory: %s @ %s:%d",
-      path, __FILE__, __LINE__
+    printf("Cannot write to directory: %s @ %s:%d, access(%s)=%d",
+      path, __FILE__, __LINE__, path, access(path, W_OK)
     );
     rc = FILO_FAILURE;
   }
