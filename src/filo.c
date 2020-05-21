@@ -38,6 +38,8 @@
 
 #include "mpi.h"
 
+#include "config.h"
+
 #include "kvtree.h"
 #include "kvtree_util.h"
 #include "kvtree_mpi.h"
@@ -197,6 +199,14 @@ int Filo_Init()
     return FILO_FAILURE;
   }
 
+#ifdef HAVE_LIBDTCMP
+  int dtcmp_rc = DTCMP_Init();
+  if (dtcmp_rc != DTCMP_SUCCESS) {
+    AXL_Finalize();
+    return FILO_FAILURE;
+  }
+#endif
+
   /* record state of outstanding transfers */
   filo_outstanding = kvtree_new();
 
@@ -208,6 +218,13 @@ int Filo_Finalize()
   if (AXL_Finalize() != AXL_SUCCESS) {
     return FILO_FAILURE;
   }
+
+#ifdef HAVE_LIBDTCMP
+  int dtcmp_rc = DTCMP_Finalize();
+  if (dtcmp_rc != DTCMP_SUCCESS) {
+    return FILO_FAILURE;
+  }
+#endif
 
   /* record state of outstanding transfers */
   kvtree_delete(&filo_outstanding);
@@ -846,13 +863,10 @@ static int filo_create_dirs(const char* basepath, int count, const char** dest_f
 
   /* identify the set of unique directories */
   uint64_t groups;
-  int dtcmp_rc = DTCMP_Rankv_strings(
+  DTCMP_Rankv_strings(
     count, dirs, &groups, group_id, group_ranks, group_rank,
     DTCMP_FLAG_NONE, comm
   );
-  if (dtcmp_rc != DTCMP_SUCCESS) {
-    rc = FILO_FAILURE;
-  }
 
   /* select leader for each directory */
   for (i = 0; i < count; i++) {
