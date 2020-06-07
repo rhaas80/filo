@@ -861,14 +861,14 @@ static int filo_create_dirs(const char* basepath, int count, const char** dest_f
     filo_free(&path);
 
     /* lookup original path where application wants file to go */
-#ifndef HAVE_LIBDTCMP
+#ifdef HAVE_LIBDTCMP
+    /* we'll use DTCMP to select one leader for each directory later */
+    leader[i] = 0;
+#else
     /* if we don't have DTCMP,
      * then we'll just issue a mkdir for each file, lots of extra
      * load on the file system, but this works */
     leader[i] = 1;
-#else
-    /* we'll use DTCMP to select one leader for each directory later */
-    leader[i] = 0;
 #endif
   }
 
@@ -898,14 +898,18 @@ static int filo_create_dirs(const char* basepath, int count, const char** dest_f
   /* create other directories in file list */
   int success = 1;
   for (i = 0; i < count; i++) {
+    /* get directory name */
+    const char* dir = dirs[i];
+
+    /* if we're the leader, create directory */
     if (leader[i]) {
-      /* create directory */
-      const char* dir = dirs[i];
       if (filo_mkdir(basepath, dir, mode_dir) != FILO_SUCCESS) {
         success = 0;
       }
-      filo_free(&dir);
     }
+
+    /* free the dirname we strdup'd */
+    filo_free(&dir);
   }
 
   /* free buffers */
