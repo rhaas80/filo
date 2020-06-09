@@ -856,9 +856,10 @@ static int filo_create_dirs(const char* basepath, int count, const char** dest_f
   for (i = 0; i < count; i++) {
     /* extract directory from filename */
     const char* filename = dest_filelist[i];
-    char* path = strdup(filename);
-    dirs[i] = strdup(dirname(path));
-    filo_free(&path);
+    spath* path = spath_from_str(filename);
+    spath_dirname(path);
+    dirs[i] = spath_strdup(path);
+    spath_delete(&path);
 
     /* lookup original path where application wants file to go */
 #ifdef HAVE_LIBDTCMP
