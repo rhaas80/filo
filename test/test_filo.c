@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
   char dest_filename[256];
   sprintf(dest_filename, "./testfile_%d.out", rank);
 
-  rc = Filo_Init();
+  rc = Filo_Init(NULL);
   const char* filelist[1] = { filename };
   const char* dest_filelist[1] = { dest_filename };
 
