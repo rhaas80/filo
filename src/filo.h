@@ -26,12 +26,16 @@ extern "C" {
 #define FILO_SUCCESS (0)
 #define FILO_FAILURE (1)
 
-/** options supported by the library */
-#define FILO_OPTIONS_VERSION 0
+/** options supported by the library
+ *
+ * This is version 0 of the option struct.
+ * No define is provided for this so that code compiled knowing only about a
+ * particular version is forced to indicate exactly which one is known and does
+ * not default to the latest version */
 typedef struct {
-  int version;     /* the version of this option struct, increases when new members are added */
-  int fetch_width; /* number of processes that may read simultaneously */
-  int flush_width; /* number of processes that may write simultaneously */
+  int version;     /** the version of this option struct, increases when new members are added */
+  int fetch_width; /** number of processes that may read simultaneously */
+  int flush_width; /** number of processes that may write simultaneously */
 } filo_options;
 
 /** initialize the library */
