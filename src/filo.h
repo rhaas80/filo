@@ -26,8 +26,16 @@ extern "C" {
 #define FILO_SUCCESS (0)
 #define FILO_FAILURE (1)
 
+/** options supported by the library */
+#define FILO_OPTIONS_VERSION 0
+typedef struct {
+  int version;     /* the version of this option struct, increases when new members are added */
+  int fetch_width; /* number of processes that may read simultaneously */
+  int flush_width; /* number of processes that may write simultaneously */
+} filo_options;
+
 /** initialize the library */
-int Filo_Init();
+int Filo_Init(const filo_options *options);
 
 /** shut down the library */
 int Filo_Finalize();

@@ -68,6 +68,9 @@
 
 static kvtree* filo_outstanding = NULL;
 
+static int fetch_width = 256;
+static int flush_width = 256;
+
 static int filo_alltrue(int valid, MPI_Comm comm)
 {
   int all_valid;
@@ -207,7 +210,7 @@ int filo_mkdir(const char* basepath, const char* dir, mode_t mode)
   return rc;
 }
 
-int Filo_Init()
+int Filo_Init(const filo_options *options)
 {
   if (AXL_Init(NULL) != AXL_SUCCESS) {
     return FILO_FAILURE;
@@ -223,6 +226,13 @@ int Filo_Init()
 
   /* record state of outstanding transfers */
   filo_outstanding = kvtree_new();
+
+  if (options != NULL) {
+    if (options->version >= 0) {
+      fetch_width = options->fetch_width;
+      flush_width = options->flush_width;
+    }
+  }
 
   return FILO_SUCCESS;
 }
@@ -609,8 +619,6 @@ static int filo_axl_stop(MPI_Comm comm)
   return rc;
 }
 
-static int filo_window_width = 256;
-
 /*
  * Fetch files specified in file_list into specified dir and update
  * filemap.
@@ -624,7 +632,8 @@ static int filo_axl_sliding_window(
   const char** src_filelist,
   const char** dest_filelist,
   MPI_Comm comm,
-  const char *axl_xfer_str)
+  const char *axl_xfer_str,
+  int window_width)
 {
   int success = FILO_SUCCESS;
 
@@ -645,7 +654,7 @@ static int filo_axl_sliding_window(
     }
 
     /* now, have a sliding window of w processes read simultaneously */
-    int w = filo_window_width;
+    int w = window_width;
     if (w > ranks_world-1) {
       w = ranks_world-1;
     }
@@ -798,7 +807,7 @@ int Filo_Fetch(
   int success = 1;
   if (path != NULL) {
     if (filo_axl_sliding_window(count, src_filelist, dest_filelist, comm,
-          axl_xfer_str) != FILO_SUCCESS) {
+          axl_xfer_str, fetch_width) != FILO_SUCCESS) {
       success = 0;
     }
   } else {
@@ -990,7 +999,7 @@ int Filo_Flush(
 
     /* write files (via AXL) */
     if (filo_axl_sliding_window(num_files, src_filelist, dest_filelist, comm,
-      axl_xfer_str) != FILO_SUCCESS) {
+      axl_xfer_str, flush_width) != FILO_SUCCESS) {
       success = 0;
     }
   } else {
