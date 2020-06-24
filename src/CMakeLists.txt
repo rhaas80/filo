@@ -7,7 +7,7 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
 
 # Install header files
 LIST(APPEND libfilo_install_headers
-	filo.h
+	filo.h filo_internal.h
 )
 INSTALL(FILES ${libfilo_install_headers} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 

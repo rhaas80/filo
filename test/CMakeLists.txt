@@ -21,6 +21,10 @@ TARGET_LINK_LIBRARIES(filo_async_test ${SPATH_EXTERNAL_LIBS} filo)
 FILO_ADD_TEST(filo_async_test 256 "")
 #ADD_TEST(NAME filo_async_test COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 3 ./filo_async_test)
 
+ADD_EXECUTABLE(test_config test_filo_async.c)
+TARGET_LINK_LIBRARIES(test_config ${SPATH_EXTERNAL_LIBS} filo)
+ADD_TEST(NAME test_config COMMAND ${MPIEXEC} ${MPIEXEC_NUMPROC_FLAG} 1 ./test_config)
+
 ####################
 # make a verbose "test" target named "check"
 ####################
