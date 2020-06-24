@@ -19,6 +19,7 @@
  * (C) Copyright 2015-2016 Intel Corporation.
  */
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -67,6 +68,10 @@
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof(a[0]))
 
 static kvtree* filo_outstanding = NULL;
+
+/* configurable options with their default values */
+static int filo_fetch_width = 256;
+static int filo_flush_width = 256;
 
 static int filo_alltrue(int valid, MPI_Comm comm)
 {
@@ -245,6 +250,153 @@ int Filo_Finalize(void)
 
   return FILO_SUCCESS;
 }
+
+/** Set a FILO config parameters */
+int Filo_Config(const kvtree* config)
+{
+  int retval = FILO_SUCCESS;
+
+  static int configured = 0;
+  static const char* known_options[] = {
+    FILO_KEY_CONFIG_FETCH_WIDTH,
+    FILO_KEY_CONFIG_FLUSH_WIDTH,
+    FILO_KEY_CONFIG_FLUSH_ASYNC_BW,
+    FILO_KEY_CONFIG_FLUSH_ASYNC_PERCENT,
+    FILO_KEY_CONFIG_FILE_BUF_SIZE,
+    FILO_KEY_CONFIG_CRC_ON_FLUSH,
+    FILO_KEY_CONFIG_DEBUG,
+    FILO_KEY_CONFIG_MKDIR,
+    FILO_KEY_CONFIG_COPY_METADATA,
+    NULL
+  };
+
+  if (!configured)
+  {
+    if (config != NULL)
+    {
+      const kvtree_elem* elem;
+
+      /* options we will pass to AXL */
+      double filo_flush_async_bw = 0.0;
+      double filo_flush_async_percent = 0.0;
+      size_t filo_file_buf_size = 131072;
+      int filo_crc_on_flush = 1;
+      int filo_debug = 0;
+      int filo_make_directories = 1;
+      int filo_copy_metadata = 0;
+
+      kvtree* axl_config_values = kvtree_new();
+      assert(axl_config_values);
+
+      /* read out all options we know about */
+      /* TODO: this could be turned into a list of structs */
+      kvtree_util_get_int(config, FILO_KEY_CONFIG_FETCH_WIDTH,
+                          &filo_fetch_width);
+      kvtree_util_get_int(config, FILO_KEY_CONFIG_FLUSH_WIDTH,
+                          &filo_flush_width);
+
+      /* options we will pass to AXL */
+      /* TODO: replace the repeated code but just a list of equivalent option
+       * names?? */
+      /* TODO: check return value of kvtree_util_set_XXX */
+      kvtree_util_get_double(config, FILO_KEY_CONFIG_FLUSH_ASYNC_BW,
+                             &filo_flush_async_bw);
+
+      kvtree_util_get_double(config, FILO_KEY_CONFIG_FLUSH_ASYNC_PERCENT,
+                             &filo_flush_async_percent);
+
+      kvtree_util_get_bytecount(config, FILO_KEY_CONFIG_FILE_BUF_SIZE,
+                                &filo_file_buf_size);
+
+      kvtree_util_get_int(config, FILO_KEY_CONFIG_CRC_ON_FLUSH,
+                          &filo_crc_on_flush);
+
+      kvtree_util_get_int(config, FILO_KEY_CONFIG_DEBUG, &filo_debug);
+
+      kvtree_util_get_int(config, FILO_KEY_CONFIG_MKDIR, &filo_make_directories);
+
+      kvtree_util_get_int(config, FILO_KEY_CONFIG_COPY_METADATA,
+                          &filo_copy_metadata);
+
+      /* pass options on to AXL */
+      kvtree_util_set_double(axl_config_values, AXL_KEY_CONFIG_FLUSH_ASYNC_BW,
+                             filo_flush_async_bw);
+
+      kvtree_util_set_double(axl_config_values,
+                             AXL_KEY_CONFIG_FLUSH_ASYNC_PERCENT,
+                             filo_flush_async_percent);
+
+      kvtree_util_set_bytecount(axl_config_values, AXL_KEY_CONFIG_FILE_BUF_SIZE,
+                                filo_file_buf_size);
+
+      kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_CRC_ON_FLUSH,
+                          filo_crc_on_flush);
+
+      kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_DEBUG, filo_debug);
+
+      kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_MKDIR,
+                          filo_make_directories);
+
+      kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_COPY_METADATA,
+                          filo_copy_metadata);
+
+      if (AXL_Config(axl_config_values) != AXL_SUCCESS)
+      {
+        retval = FILO_FAILURE;
+      }
+
+      kvtree_delete(&axl_config_values);
+
+      /* report all unknown options (typos?) */
+      for (elem = kvtree_elem_first(config); elem ;
+           elem = kvtree_elem_next(elem))
+      {
+        /* must be only one level deep, ie plain kev = value */
+        {
+          const kvtree* elem_hash = kvtree_elem_hash(elem);
+          assert(kvtree_size(elem_hash) == 1);
+          {
+            const kvtree* kvtree_first_elem_hash =
+              kvtree_elem_hash(kvtree_elem_first(elem_hash));
+            assert(kvtree_size(kvtree_first_elem_hash) == 0);
+          }
+        }
+        /* check against known options */
+        {
+          const char** opt;
+          int found = 0;
+          for (opt = known_options; opt; opt++)
+          {
+            if (strcmp(*opt, kvtree_elem_key(elem)) == 0)
+            {
+              found = 1;
+              break;
+            }
+          }
+          if (!found)
+          {
+            fprintf(stderr,
+                    "Unknown configuration parameter '%s' with value '%s'\n",
+                    kvtree_elem_key(elem),
+                    kvtree_elem_key(kvtree_elem_first(kvtree_elem_hash(elem))));
+            retval = FILO_FAILURE;
+          }
+        }
+      }
+    }
+
+    /* only accept configuration options once */
+    configured = 1;
+  }
+  else
+  {
+    fprintf(stderr, "Already configured\n");
+    retval = FILO_FAILURE;
+  }
+
+  return retval;
+}
+
 
 /*
 =========================================
@@ -609,8 +761,6 @@ static int filo_axl_stop(MPI_Comm comm)
   return rc;
 }
 
-static int filo_window_width = 256;
-
 /*
  * Fetch files specified in file_list into specified dir and update
  * filemap.
@@ -624,7 +774,8 @@ static int filo_axl_sliding_window(
   const char** src_filelist,
   const char** dest_filelist,
   MPI_Comm comm,
-  const char *axl_xfer_str)
+  const char *axl_xfer_str,
+  const int window_width)
 {
   int success = FILO_SUCCESS;
 
@@ -645,7 +796,7 @@ static int filo_axl_sliding_window(
     }
 
     /* now, have a sliding window of w processes read simultaneously */
-    int w = filo_window_width;
+    int w = window_width;
     if (w > ranks_world-1) {
       w = ranks_world-1;
     }
@@ -798,7 +949,7 @@ int Filo_Fetch(
   int success = 1;
   if (path != NULL) {
     if (filo_axl_sliding_window(count, src_filelist, dest_filelist, comm,
-          axl_xfer_str) != FILO_SUCCESS) {
+          axl_xfer_str, filo_fetch_width) != FILO_SUCCESS) {
       success = 0;
     }
   } else {
@@ -990,7 +1141,7 @@ int Filo_Flush(
 
     /* write files (via AXL) */
     if (filo_axl_sliding_window(num_files, src_filelist, dest_filelist, comm,
-      axl_xfer_str) != FILO_SUCCESS) {
+      axl_xfer_str, filo_flush_width) != FILO_SUCCESS) {
       success = 0;
     }
   } else {

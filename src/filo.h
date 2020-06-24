@@ -2,6 +2,7 @@
 #define FILO_H
 
 #include "mpi.h"
+#include "kvtree.h"
 
 /** \defgroup filo FILO
  *  \brief File flush and fetch, with MPI
@@ -26,14 +27,26 @@ extern "C" {
 #define FILO_SUCCESS (0)
 #define FILO_FAILURE (1)
 
+#define FILO_KEY_CONFIG_FETCH_WIDTH "FETCH_WIDTH"
+#define FILO_KEY_CONFIG_FLUSH_WIDTH "FLUSH_WIDTH"
+/* option below are not used by FILO directly but passed on to AXL */
+/* TODO: need to define defaults in FILO as discussed with Adam */
+#define FILO_KEY_CONFIG_FLUSH_ASYNC_BW "FLUSH_ASYNC_BW"
+#define FILO_KEY_CONFIG_FLUSH_ASYNC_PERCENT "FLUSH_ASYNC_PERCENT"
+#define FILO_KEY_CONFIG_FILE_BUF_SIZE "FILE_BUF_SIZE"
+#define FILO_KEY_CONFIG_CRC_ON_FLUSH "CRC_ON_FLUSH"
+#define FILO_KEY_CONFIG_DEBUG "DEBUG"
+#define FILO_KEY_CONFIG_MKDIR "MKDIR"
+#define FILO_KEY_CONFIG_COPY_METADATA "COPY_METADATA"
+
 /** initialize the library */
 int Filo_Init(void);
 
 /** shut down the library */
 int Filo_Finalize(void);
 
-/** Set a FILO config parameter */
-int Filo_Config(char *config_str);
+/** Set a FILO config parameters */
+int Filo_Config(const kvtree* config);
 
 /** given a pointer to a filo file at filopath that was written by
  * filo_flush, copy files from their current location to path,
