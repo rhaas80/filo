@@ -207,7 +207,7 @@ int filo_mkdir(const char* basepath, const char* dir, mode_t mode)
   return rc;
 }
 
-int Filo_Init()
+int Filo_Init(void)
 {
   if (AXL_Init() != AXL_SUCCESS) {
     return FILO_FAILURE;
@@ -227,7 +227,7 @@ int Filo_Init()
   return FILO_SUCCESS;
 }
 
-int Filo_Finalize()
+int Filo_Finalize(void)
 {
   if (AXL_Finalize() != AXL_SUCCESS) {
     return FILO_FAILURE;

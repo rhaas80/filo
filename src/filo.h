@@ -27,10 +27,10 @@ extern "C" {
 #define FILO_FAILURE (1)
 
 /** initialize the library */
-int Filo_Init();
+int Filo_Init(void);
 
 /** shut down the library */
-int Filo_Finalize();
+int Filo_Finalize(void);
 
 /** Set a FILO config parameter */
 int Filo_Config(char *config_str);
