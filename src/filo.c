@@ -209,7 +209,7 @@ int filo_mkdir(const char* basepath, const char* dir, mode_t mode)
 
 int Filo_Init()
 {
-  if (AXL_Init(NULL) != AXL_SUCCESS) {
+  if (AXL_Init() != AXL_SUCCESS) {
     return FILO_FAILURE;
   }
 
@@ -441,14 +441,12 @@ static int filo_axl(int num_files, const char** src_filelist,
     const char** dest_filelist, const char *axl_xfer_str)
 {
   int rc = FILO_SUCCESS;
-  axl_xfer_t type;
 
   /* TODO: allow user to name this transfer */
 
-
-  type = axl_xfer_str_to_type(axl_xfer_str);
   /* define a transfer handle */
-  int id = AXL_Create(type, "transfer");
+  axl_xfer_t type = axl_xfer_str_to_type(axl_xfer_str);
+  int id = AXL_Create(type, "transfer", NULL);
   if (id < 0) {
     filo_err("Failed to create AXL transfer handle @ %s:%d",
       __FILE__, __LINE__
@@ -503,15 +501,15 @@ static int filo_axl_start(const char* name, int num_files,
   const char* axl_xfer_str)
 {
   int rc = FILO_SUCCESS;
-  axl_xfer_t type;
 
   /* create record for this transfer in outstanding list */
   kvtree* name_hash = kvtree_set_kv(filo_outstanding, FILO_KEY_OUT_NAME, name);
 
+  /* TODO: allow user to name this transfer */
+
   /* define a transfer handle */
-  //int id = AXL_Create(AXL_XFER_ASYNC_DAEMON, "transfer");
-  type = axl_xfer_str_to_type(axl_xfer_str);
-  int id = AXL_Create(type, "transfer");
+  axl_xfer_t type = axl_xfer_str_to_type(axl_xfer_str);
+  int id = AXL_Create(type, "transfer", NULL);
   if (id < 0) {
     filo_err("Failed to create AXL transfer handle @ %s:%d",
       __FILE__, __LINE__
