@@ -275,6 +275,7 @@ int Filo_Config(const kvtree* config)
     if (config != NULL)
     {
       const kvtree_elem* elem;
+      unsigned long ul;
 
       /* options we will pass to AXL */
       double filo_flush_async_bw = 0.0;
@@ -299,8 +300,17 @@ int Filo_Config(const kvtree* config)
       /* TODO: replace the repeated code but just a list of equivalent option
        * names?? */
       /* TODO: check return value of kvtree_util_set_XXX */
-      kvtree_util_get_double(config, FILO_KEY_CONFIG_FLUSH_ASYNC_BW,
-                             &filo_flush_async_bw);
+      if (kvtree_util_get_bytecount(config, FILO_KEY_CONFIG_FLUSH_ASYNC_BW,
+                                    &ul) == KVTREE_SUCCESS) {
+        filo_flush_async_bw = (double) ul;
+        if (filo_flush_async_bw != ul) {
+          char *value;
+          kvtree_util_get_str(config, FILO_KEY_CONFIG_FLUSH_ASYNC_BW, &value);
+          fprintf(stderr, "Value %s passed for %s exceeds int range\n",
+                  value, FILO_KEY_CONFIG_FLUSH_ASYNC_BW);
+          retval = FILO_FAILURE;
+        }
+      }
 
       kvtree_util_get_double(config, FILO_KEY_CONFIG_FLUSH_ASYNC_PERCENT,
                              &filo_flush_async_percent);
