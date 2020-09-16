@@ -50,6 +50,7 @@
 #include "axl.h"
 
 #include "filo.h"
+#include "filo_internal.h"
 
 #ifdef HAVE_LIBDTCMP
 #include "dtcmp.h"
@@ -70,8 +71,8 @@
 static kvtree* filo_outstanding = NULL;
 
 /* configurable options with their default values */
-static int filo_fetch_width = 256;
-static int filo_flush_width = 256;
+int filo_fetch_width = 256;
+int filo_flush_width = 256;
 
 static int filo_alltrue(int valid, MPI_Comm comm)
 {
