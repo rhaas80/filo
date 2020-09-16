@@ -252,9 +252,9 @@ int Filo_Finalize(void)
 }
 
 /** Set a FILO config parameters */
-int Filo_Config(const kvtree* config)
+kvtree* Filo_Config(const kvtree* config)
 {
-  int retval = FILO_SUCCESS;
+  kvtree* retval = (kvtree*)config;
 
   static int configured = 0;
   static const char* known_options[] = {
@@ -269,6 +269,11 @@ int Filo_Config(const kvtree* config)
     FILO_KEY_CONFIG_COPY_METADATA,
     NULL
   };
+
+  /* TODO: implement getting configuration options back */
+  if (config == NULL) {
+    return NULL;
+  }
 
   if (!configured) {
     if (config != NULL) {
@@ -305,7 +310,7 @@ int Filo_Config(const kvtree* config)
           filo_err("Value %s passed for %s exceeds int range @ %s:%d",
             value, FILO_KEY_CONFIG_FLUSH_ASYNC_BW, __FILE__, __LINE__
           );
-          retval = FILO_FAILURE;
+          retval = NULL;
         }
       }
 
@@ -347,8 +352,8 @@ int Filo_Config(const kvtree* config)
       kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_COPY_METADATA,
                           filo_copy_metadata);
 
-      if (AXL_Config(axl_config_values) != AXL_SUCCESS) {
-        retval = FILO_FAILURE;
+      if (AXL_Config(axl_config_values) == NULL) {
+        retval = NULL;
       }
 
       kvtree_delete(&axl_config_values);
@@ -381,7 +386,7 @@ int Filo_Config(const kvtree* config)
             kvtree_elem_key(kvtree_elem_first(kvtree_elem_hash(elem))),
             __FILE__, __LINE__
           );
-          retval = FILO_FAILURE;
+          retval = NULL;
         }
       }
     }
@@ -390,7 +395,7 @@ int Filo_Config(const kvtree* config)
     configured = 1;
   } else {
     filo_err("Already configured  @ %s:%d", __FILE__, __LINE__);
-    retval = FILO_FAILURE;
+    retval = NULL;
   }
 
   return retval;
