@@ -2,7 +2,6 @@
 #define FILO_H
 
 #include "mpi.h"
-#include "kvtree.h"
 
 /** \defgroup filo FILO
  *  \brief File flush and fetch, with MPI
@@ -46,6 +45,7 @@ int Filo_Init(void);
 int Filo_Finalize(void);
 
 /** Set a FILO config parameters */
+typedef struct kvtree_struct kvtree;
 int Filo_Config(const kvtree* config);
 
 /** given a pointer to a filo file at filopath that was written by
