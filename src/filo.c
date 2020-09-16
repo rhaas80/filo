@@ -270,13 +270,8 @@ int Filo_Config(const kvtree* config)
     NULL
   };
 
-  if (!configured)
-  {
-    if (config != NULL)
-    {
-      const kvtree_elem* elem;
-      unsigned long ul;
-
+  if (!configured) {
+    if (config != NULL) {
       /* options we will pass to AXL */
       double filo_flush_async_bw = 0.0;
       double filo_flush_async_percent = 0.0;
@@ -300,14 +295,16 @@ int Filo_Config(const kvtree* config)
       /* TODO: replace the repeated code but just a list of equivalent option
        * names?? */
       /* TODO: check return value of kvtree_util_set_XXX */
+      unsigned long ul;
       if (kvtree_util_get_bytecount(config, FILO_KEY_CONFIG_FLUSH_ASYNC_BW,
                                     &ul) == KVTREE_SUCCESS) {
         filo_flush_async_bw = (double) ul;
         if (filo_flush_async_bw != ul) {
           char *value;
           kvtree_util_get_str(config, FILO_KEY_CONFIG_FLUSH_ASYNC_BW, &value);
-          fprintf(stderr, "Value %s passed for %s exceeds int range\n",
-                  value, FILO_KEY_CONFIG_FLUSH_ASYNC_BW);
+          filo_err("Value %s passed for %s exceeds int range @ %s:%d",
+            value, FILO_KEY_CONFIG_FLUSH_ASYNC_BW, __FILE__, __LINE__
+          );
           retval = FILO_FAILURE;
         }
       }
@@ -350,57 +347,49 @@ int Filo_Config(const kvtree* config)
       kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_COPY_METADATA,
                           filo_copy_metadata);
 
-      if (AXL_Config(axl_config_values) != AXL_SUCCESS)
-      {
+      if (AXL_Config(axl_config_values) != AXL_SUCCESS) {
         retval = FILO_FAILURE;
       }
 
       kvtree_delete(&axl_config_values);
 
       /* report all unknown options (typos?) */
+      const kvtree_elem* elem;
       for (elem = kvtree_elem_first(config); elem ;
            elem = kvtree_elem_next(elem))
       {
         /* must be only one level deep, ie plain kev = value */
+        const kvtree* elem_hash = kvtree_elem_hash(elem);
+        assert(kvtree_size(elem_hash) == 1);
+        const kvtree* kvtree_first_elem_hash =
+          kvtree_elem_hash(kvtree_elem_first(elem_hash));
+        assert(kvtree_size(kvtree_first_elem_hash) == 0);
+        /* check against known options */
+        const char** opt;
+        int found = 0;
+        for (opt = known_options; opt; opt++)
         {
-          const kvtree* elem_hash = kvtree_elem_hash(elem);
-          assert(kvtree_size(elem_hash) == 1);
+          if (strcmp(*opt, kvtree_elem_key(elem)) == 0)
           {
-            const kvtree* kvtree_first_elem_hash =
-              kvtree_elem_hash(kvtree_elem_first(elem_hash));
-            assert(kvtree_size(kvtree_first_elem_hash) == 0);
+            found = 1;
+            break;
           }
         }
-        /* check against known options */
-        {
-          const char** opt;
-          int found = 0;
-          for (opt = known_options; opt; opt++)
-          {
-            if (strcmp(*opt, kvtree_elem_key(elem)) == 0)
-            {
-              found = 1;
-              break;
-            }
-          }
-          if (!found)
-          {
-            fprintf(stderr,
-                    "Unknown configuration parameter '%s' with value '%s'\n",
-                    kvtree_elem_key(elem),
-                    kvtree_elem_key(kvtree_elem_first(kvtree_elem_hash(elem))));
-            retval = FILO_FAILURE;
-          }
+        if (!found) {
+          filo_err( "Unknown configuration parameter '%s' with value '%s' @ %s:%d",
+            kvtree_elem_key(elem),
+            kvtree_elem_key(kvtree_elem_first(kvtree_elem_hash(elem))),
+            __FILE__, __LINE__
+          );
+          retval = FILO_FAILURE;
         }
       }
     }
 
     /* only accept configuration options once */
     configured = 1;
-  }
-  else
-  {
-    fprintf(stderr, "Already configured\n");
+  } else {
+    filo_err("Already configured  @ %s:%d", __FILE__, __LINE__);
     retval = FILO_FAILURE;
   }
 
