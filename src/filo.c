@@ -261,10 +261,7 @@ kvtree* Filo_Config(const kvtree* config)
   static const char* known_options[] = {
     FILO_KEY_CONFIG_FETCH_WIDTH,
     FILO_KEY_CONFIG_FLUSH_WIDTH,
-    FILO_KEY_CONFIG_FLUSH_ASYNC_BW,
-    FILO_KEY_CONFIG_FLUSH_ASYNC_PERCENT,
     FILO_KEY_CONFIG_FILE_BUF_SIZE,
-    FILO_KEY_CONFIG_CRC_ON_FLUSH,
     FILO_KEY_CONFIG_DEBUG,
     FILO_KEY_CONFIG_MKDIR,
     FILO_KEY_CONFIG_COPY_METADATA,
@@ -279,10 +276,7 @@ kvtree* Filo_Config(const kvtree* config)
   if (!configured) {
     if (config != NULL) {
       /* options we will pass to AXL */
-      double filo_flush_async_bw = 0.0;
-      double filo_flush_async_percent = 0.0;
       size_t filo_file_buf_size = 131072;
-      int filo_crc_on_flush = 1;
       int filo_debug = 0;
       int filo_make_directories = 1;
       int filo_copy_metadata = 0;
@@ -300,29 +294,9 @@ kvtree* Filo_Config(const kvtree* config)
       /* options we will pass to AXL */
       /* TODO: replace the repeated code but just a list of equivalent option
        * names?? */
-      /* TODO: check return value of kvtree_util_set_XXX */
-      unsigned long ul;
-      if (kvtree_util_get_bytecount(config, FILO_KEY_CONFIG_FLUSH_ASYNC_BW,
-                                    &ul) == KVTREE_SUCCESS) {
-        filo_flush_async_bw = (double) ul;
-        if (filo_flush_async_bw != ul) {
-          char *value;
-          kvtree_util_get_str(config, FILO_KEY_CONFIG_FLUSH_ASYNC_BW, &value);
-          filo_err("Value %s passed for %s exceeds int range @ %s:%d",
-            value, FILO_KEY_CONFIG_FLUSH_ASYNC_BW, __FILE__, __LINE__
-          );
-          retval = NULL;
-        }
-      }
-
-      kvtree_util_get_double(config, FILO_KEY_CONFIG_FLUSH_ASYNC_PERCENT,
-                             &filo_flush_async_percent);
 
       kvtree_util_get_bytecount(config, FILO_KEY_CONFIG_FILE_BUF_SIZE,
                                 &filo_file_buf_size);
-
-      kvtree_util_get_int(config, FILO_KEY_CONFIG_CRC_ON_FLUSH,
-                          &filo_crc_on_flush);
 
       kvtree_util_get_int(config, FILO_KEY_CONFIG_DEBUG, &filo_debug);
 
@@ -332,18 +306,8 @@ kvtree* Filo_Config(const kvtree* config)
                           &filo_copy_metadata);
 
       /* pass options on to AXL */
-      kvtree_util_set_double(axl_config_values, AXL_KEY_CONFIG_FLUSH_ASYNC_BW,
-                             filo_flush_async_bw);
-
-      kvtree_util_set_double(axl_config_values,
-                             AXL_KEY_CONFIG_FLUSH_ASYNC_PERCENT,
-                             filo_flush_async_percent);
-
       kvtree_util_set_bytecount(axl_config_values, AXL_KEY_CONFIG_FILE_BUF_SIZE,
                                 filo_file_buf_size);
-
-      kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_CRC_ON_FLUSH,
-                          filo_crc_on_flush);
 
       kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_DEBUG, filo_debug);
 
@@ -353,7 +317,7 @@ kvtree* Filo_Config(const kvtree* config)
       kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_COPY_METADATA,
                           filo_copy_metadata);
 
-      if (AXL_Config(axl_config_values) == NULL) {
+      if (AXL_Config(-1, axl_config_values) == NULL) {
         retval = NULL;
       }
 
