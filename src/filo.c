@@ -257,7 +257,6 @@ kvtree* Filo_Config(const kvtree* config)
 {
   kvtree* retval = (kvtree*)config;
 
-  static int configured = 0;
   static const char* known_options[] = {
     FILO_KEY_CONFIG_FETCH_WIDTH,
     FILO_KEY_CONFIG_FLUSH_WIDTH,
@@ -273,94 +272,86 @@ kvtree* Filo_Config(const kvtree* config)
     return NULL;
   }
 
-  if (!configured) {
-    if (config != NULL) {
-      /* options we will pass to AXL */
-      size_t filo_file_buf_size = 131072;
-      int filo_debug = 0;
-      int filo_make_directories = 1;
-      int filo_copy_metadata = 0;
+  if (config != NULL) {
+    /* options we will pass to AXL */
+    size_t filo_file_buf_size = 131072;
+    int filo_debug = 0;
+    int filo_make_directories = 1;
+    int filo_copy_metadata = 0;
 
-      kvtree* axl_config_values = kvtree_new();
-      assert(axl_config_values);
+    kvtree* axl_config_values = kvtree_new();
+    assert(axl_config_values);
 
-      /* read out all options we know about */
-      /* TODO: this could be turned into a list of structs */
-      kvtree_util_get_int(config, FILO_KEY_CONFIG_FETCH_WIDTH,
-                          &filo_fetch_width);
-      kvtree_util_get_int(config, FILO_KEY_CONFIG_FLUSH_WIDTH,
-                          &filo_flush_width);
+    /* read out all options we know about */
+    /* TODO: this could be turned into a list of structs */
+    kvtree_util_get_int(config, FILO_KEY_CONFIG_FETCH_WIDTH,
+                        &filo_fetch_width);
+    kvtree_util_get_int(config, FILO_KEY_CONFIG_FLUSH_WIDTH,
+                        &filo_flush_width);
 
-      /* options we will pass to AXL */
-      /* TODO: replace the repeated code but just a list of equivalent option
-       * names?? */
+    /* options we will pass to AXL */
+    /* TODO: replace the repeated code but just a list of equivalent option
+     * names?? */
 
-      kvtree_util_get_bytecount(config, FILO_KEY_CONFIG_FILE_BUF_SIZE,
-                                &filo_file_buf_size);
+    kvtree_util_get_bytecount(config, FILO_KEY_CONFIG_FILE_BUF_SIZE,
+                              &filo_file_buf_size);
 
-      kvtree_util_get_int(config, FILO_KEY_CONFIG_DEBUG, &filo_debug);
+    kvtree_util_get_int(config, FILO_KEY_CONFIG_DEBUG, &filo_debug);
 
-      kvtree_util_get_int(config, FILO_KEY_CONFIG_MKDIR, &filo_make_directories);
+    kvtree_util_get_int(config, FILO_KEY_CONFIG_MKDIR, &filo_make_directories);
 
-      kvtree_util_get_int(config, FILO_KEY_CONFIG_COPY_METADATA,
-                          &filo_copy_metadata);
+    kvtree_util_get_int(config, FILO_KEY_CONFIG_COPY_METADATA,
+                        &filo_copy_metadata);
 
-      /* pass options on to AXL */
-      kvtree_util_set_bytecount(axl_config_values, AXL_KEY_CONFIG_FILE_BUF_SIZE,
-                                filo_file_buf_size);
+    /* pass options on to AXL */
+    kvtree_util_set_bytecount(axl_config_values, AXL_KEY_CONFIG_FILE_BUF_SIZE,
+                              filo_file_buf_size);
 
-      kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_DEBUG, filo_debug);
+    kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_DEBUG, filo_debug);
 
-      kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_MKDIR,
-                          filo_make_directories);
+    kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_MKDIR,
+                        filo_make_directories);
 
-      kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_COPY_METADATA,
-                          filo_copy_metadata);
+    kvtree_util_set_int(axl_config_values, AXL_KEY_CONFIG_COPY_METADATA,
+                        filo_copy_metadata);
 
-      if (AXL_Config(-1, axl_config_values) == NULL) {
-        retval = NULL;
-      }
-
-      kvtree_delete(&axl_config_values);
-
-      /* report all unknown options (typos?) */
-      const kvtree_elem* elem;
-      for (elem = kvtree_elem_first(config); elem ;
-           elem = kvtree_elem_next(elem))
-      {
-        /* must be only one level deep, ie plain kev = value */
-        const kvtree* elem_hash = kvtree_elem_hash(elem);
-        assert(kvtree_size(elem_hash) == 1);
-        const kvtree* kvtree_first_elem_hash =
-          kvtree_elem_hash(kvtree_elem_first(elem_hash));
-        assert(kvtree_size(kvtree_first_elem_hash) == 0);
-        /* check against known options */
-        const char** opt;
-        int found = 0;
-        for (opt = known_options; *opt != NULL; opt++)
-        {
-          if (strcmp(*opt, kvtree_elem_key(elem)) == 0)
-          {
-            found = 1;
-            break;
-          }
-        }
-        if (!found) {
-          filo_err( "Unknown configuration parameter '%s' with value '%s' @ %s:%d",
-            kvtree_elem_key(elem),
-            kvtree_elem_key(kvtree_elem_first(kvtree_elem_hash(elem))),
-            __FILE__, __LINE__
-          );
-          retval = NULL;
-        }
-      }
+    if (AXL_Config(-1, axl_config_values) == NULL) {
+      retval = NULL;
     }
 
-    /* only accept configuration options once */
-    configured = 1;
-  } else {
-    filo_err("Already configured  @ %s:%d", __FILE__, __LINE__);
-    retval = NULL;
+    kvtree_delete(&axl_config_values);
+
+    /* report all unknown options (typos?) */
+    const kvtree_elem* elem;
+    for (elem = kvtree_elem_first(config); elem ;
+         elem = kvtree_elem_next(elem))
+    {
+      /* must be only one level deep, ie plain kev = value */
+      const kvtree* elem_hash = kvtree_elem_hash(elem);
+      assert(kvtree_size(elem_hash) == 1);
+      const kvtree* kvtree_first_elem_hash =
+        kvtree_elem_hash(kvtree_elem_first(elem_hash));
+      assert(kvtree_size(kvtree_first_elem_hash) == 0);
+      /* check against known options */
+      const char** opt;
+      int found = 0;
+      for (opt = known_options; *opt != NULL; opt++)
+      {
+        if (strcmp(*opt, kvtree_elem_key(elem)) == 0)
+        {
+          found = 1;
+          break;
+        }
+      }
+      if (!found) {
+        filo_err( "Unknown configuration parameter '%s' with value '%s' @ %s:%d",
+          kvtree_elem_key(elem),
+          kvtree_elem_key(kvtree_elem_first(kvtree_elem_hash(elem))),
+          __FILE__, __LINE__
+        );
+        retval = NULL;
+      }
+    }
   }
 
   return retval;
