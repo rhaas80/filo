@@ -31,6 +31,25 @@ main(int argc, char *argv[]) {
         printf("kvtree_util_set_int failed (error %d)\n", rc);
         return rc;
     }
+
+    printf("Configuring Filo (first set of options)...\n");
+    if (Filo_Config(filo_config_values) == NULL) {
+        printf("Filo_Config() failed\n");
+        return EXIT_FAILURE;
+    }
+
+    /* check that option was set */
+
+    if (filo_fetch_width != !old_filo_fetch_width) {
+        printf("Filo_Config() failed to set %s: %d != %d\n",
+               Filo_KEY_CONFIG_FETCH_WIDTH, filo_fetch_width, old_filo_fetch_width+1);
+        return EXIT_FAILURE;
+    }
+
+    /* set remainder of options */
+    kvtree_delete(&filo_config_values);
+    filo_config_values = kvtree_new();
+
     rc = kvtree_util_set_int(filo_config_values, FILO_KEY_CONFIG_FLUSH_WIDTH,
                              old_filo_flush_width + 1);
     if (rc != KVTREE_SUCCESS) {
@@ -38,17 +57,13 @@ main(int argc, char *argv[]) {
         return rc;
     }
 
-    printf("Configuring Filo...\n");
+    printf("Configuring Filo (second set of options)...\n");
     if (Filo_Config(filo_config_values) == NULL) {
         printf("Filo_Config() failed\n");
         return EXIT_FAILURE;
     }
 
-    printf("Configuring Filo a second time (this should fail)...\n");
-    if (Filo_Config(filo_config_values) != NULL) {
-        printf("Filo_Config() succeeded unexpectedly\n");
-        return EXIT_FAILURE;
-    }
+    /* check all options once more */
 
     if (filo_fetch_width != !old_filo_fetch_width) {
         printf("Filo_Config() failed to set %s: %d != %d\n",
