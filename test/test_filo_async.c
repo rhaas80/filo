@@ -1,4 +1,5 @@
 #include <stdlib.h>
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -32,8 +33,9 @@ int main(int argc, char* argv[])
     write(fd, proc_specific_file_content, strlen(proc_specific_file_content));
     close(fd);
   } else {
-    rc = TEST_FAIL;
+    printf ("Error in line %d, file %s, function %s.\n", __LINE__, __FILE__, __func__);
     printf("Error opening file %s: %d %s\n", filename, errno, strerror(errno));
+    return TEST_FAIL;
   }
 
   char dest_filename[256];
@@ -65,27 +67,50 @@ int main(int argc, char* argv[])
     int rank_from_file_name = *((strstr(dst_filelist[i], ".out"))-1) - '0';
     //assertain that the filename with consistant process marker was passed through flush/fetch
     if(rank != rank_from_file_name){
-      rc = TEST_FAIL;
+      printf ("Error in line %d, file %s, function %s.\n", __LINE__, __FILE__, __func__);
       printf("rank = %d, rank_from_file_name = %d\n", rank, rank_from_file_name);
+      return TEST_FAIL;
     }
     //assertain that the file content is consistent with the process
     FILE *file = fopen(dst_filelist[i], "r");
     char *readContent = NULL;
     size_t readContent_size = 0;
     if (!file){
-      rc = TEST_FAIL;
+      printf ("Error in line %d, file %s, function %s.\n", __LINE__, __FILE__, __func__);
       printf("Error opening file %s: %d %s\n", dst_filelist[i] , errno, strerror(errno));
+      return TEST_FAIL;
     }
     size_t line_size = getline(&readContent, &readContent_size, file);
     if (strcmp(readContent, proc_specific_file_content) != 0){
-      rc = TEST_FAIL;
+      printf ("Error in line %d, file %s, function %s.\n", __LINE__, __FILE__, __func__);
       printf("flushed file content = %s, fetched file content = %s\n", proc_specific_file_content, readContent);
+      return TEST_FAIL;
     }
     fclose(file);
 
     free(src_filelist[i]);
     free(dst_filelist[i]);
   }
+  //MPI_COMM_NULL test
+  rc = Filo_Flush_start("mapfile", NULL, 1, filelist, dest_filelist, MPI_COMM_NULL, "pthread");
+  if(rc == FILO_SUCCESS){
+    printf ("Error in line %d, file %s, function %s.\n", __LINE__, __FILE__, __func__);
+    printf("Filo_Flush_start succeeded with MPI_COMM_NULL comm parameters\n");
+    return TEST_FAIL;
+  }
+  rc = Filo_Flush_test("mapfile", MPI_COMM_NULL);
+  if(rc == FILO_SUCCESS){
+    printf ("Error in line %d, file %s, function %s.\n", __LINE__, __FILE__, __func__);
+    printf("Filo_Flush_start succeeded with MPI_COMM_NULL comm parameters\n");
+    return TEST_FAIL;
+  }
+  rc = Filo_Flush_wait("mapfile", MPI_COMM_NULL);
+  if(rc == FILO_SUCCESS){
+    printf ("Error in line %d, file %s, function %s.\n", __LINE__, __FILE__, __func__);
+    printf("Filo_Flush_start succeeded with MPI_COMM_NULL comm parameters\n");
+    return TEST_FAIL;
+  }
+ 
   free(src_filelist);
   free(dst_filelist);
 

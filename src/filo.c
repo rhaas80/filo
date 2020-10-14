@@ -735,6 +735,12 @@ int Filo_Fetch(
   MPI_Comm comm,
   const char *axl_xfer_str)
 {
+  if (comm == MPI_COMM_NULL) {
+    filo_err("Filo_Fetch comm parameter is MPI_COMM_NULL @ %s:%d",
+      __FILE__, __LINE__);
+    return FILO_FAILURE;
+  }
+
   int rc = FILO_SUCCESS;
 
   /* initialize output variables */
@@ -940,6 +946,12 @@ int Filo_Flush(
   MPI_Comm comm,
   const char *axl_xfer_str)
 {
+  if (comm == MPI_COMM_NULL) {
+    filo_err("Filo_Flush comm parameter is MPI_COMM_NULL @ %s:%d",
+      __FILE__, __LINE__);
+    return FILO_FAILURE;
+  }
+
   int rc = FILO_SUCCESS;
 
   /* we can skip transfer if all paths match */
@@ -1023,6 +1035,12 @@ int Filo_Flush_start(
   MPI_Comm comm,
   const char *axl_xfer_str)
 {
+  if (comm == MPI_COMM_NULL) {
+    filo_err("Filo_Flush_start comm parameter is MPI_COMM_NULL @ %s:%d",
+      __FILE__, __LINE__);
+    return FILO_FAILURE;
+  }
+
   int rc = FILO_SUCCESS;
 
   /* build a list of files for this rank */
@@ -1079,6 +1097,12 @@ int Filo_Flush_start(
 
 int Filo_Flush_test(const char* filopath, MPI_Comm comm)
 {
+  if (comm == MPI_COMM_NULL) {
+    filo_err("Filo_Flush_test comm parameter is MPI_COMM_NULL @ %s:%d",
+      __FILE__, __LINE__);
+    return FILO_FAILURE;
+  }
+
   int tmp_rc = filo_axl_test(filopath, comm);
 
   /* check that all processes are done */
@@ -1091,6 +1115,12 @@ int Filo_Flush_test(const char* filopath, MPI_Comm comm)
 
 int Filo_Flush_wait(const char* filopath, MPI_Comm comm)
 {
+  if (comm == MPI_COMM_NULL) {
+    filo_err("Filo_Flush_wait comm parameter is MPI_COMM_NULL @ %s:%d",
+      __FILE__, __LINE__);
+    return FILO_FAILURE;
+  }
+
   int tmp_rc = filo_axl_wait(filopath, comm);
 
   /* check that all processes are complete */
@@ -1103,6 +1133,12 @@ int Filo_Flush_wait(const char* filopath, MPI_Comm comm)
 
 int Filo_Flush_stop(MPI_Comm comm)
 {
+  if (comm == MPI_COMM_NULL) {
+    filo_err("Filo_Flush_stop comm parameter is MPI_COMM_NULL @ %s:%d",
+      __FILE__, __LINE__);
+    return FILO_FAILURE;
+  }
+
   int tmp_rc = filo_axl_stop(comm);
 
   /* check that all processes have stopped */

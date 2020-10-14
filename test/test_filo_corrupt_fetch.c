@@ -32,8 +32,9 @@ int main(int argc, char* argv[])
     write(fd, proc_specific_file_content, strlen(proc_specific_file_content));
     close(fd);
   } else {
-    rc = TEST_FAIL;
+    printf ("Error in line %d, file %s, function %s.\n", __LINE__, __FILE__, __func__);
     printf("Error opening file %s: %d %s\n", filename, errno, strerror(errno));
+    return TEST_FAIL;
   }
 
   char dest_filename[256];
@@ -59,9 +60,10 @@ int main(int argc, char* argv[])
   /* src base path is still NULL (consistent with Filo_Flush), but the dest base path is /dev/shm*/
   int filo_ret = Filo_Fetch("mapfile", NULL, "/dev/shm", &num_files, &src_filelist, &dst_filelist, MPI_COMM_WORLD, NULL);
   //check if the return value is error -- which is the correct behavior -- otherwise return fail
-  if(filo_ret ==0){
+  if(filo_ret == 0){
+    printf ("Error in line %d, file %s, function %s.\n", __LINE__, __FILE__, __func__);
     printf("Error: Filo_Fetch should fail because rank 1 destination file was removed pre- fetch. rank = %d, filo_ret = %d\n", rank, filo_ret);
-    rc = TEST_FAIL;
+    return TEST_FAIL;
   }
 
   MPI_Finalize();
